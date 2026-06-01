@@ -121,6 +121,38 @@ npm run dev
 
 **Prerequisites:** Node.js ≥ 18
 
+### Linux / Raspberry Pi (experimental)
+
+Cloe can also run as the desktop bridge host on Linux, including Raspberry Pi OS / Debian ARM64. Android can then connect to the Pi over LAN or Tailscale the same way it connects to a Mac/PC.
+
+**Recommended Raspberry Pi setup:** use a 64-bit desktop OS and an X11 session. Wayland support for transparent, always-on-top Electron windows can vary by compositor.
+
+```bash
+git clone https://github.com/JakimLi/cloe-desktop.git
+cd cloe-desktop
+
+sudo apt update
+
+# Runtime packages used by Electron (usually already present on Raspberry Pi OS Desktop)
+sudo apt install -y libgtk-3-0 libnotify4 libnss3 libxss1 libxtst6 xdg-utils libatspi2.0-0 libuuid1 libsecret-1-0
+
+# Build prerequisites for node-pty when installing from source
+sudo apt install -y nodejs npm build-essential python3-setuptools
+
+npm install
+npm run pack:linux:dir
+./release/linux-arm64-unpacked/cloe-desktop
+```
+
+For a packaged Linux build:
+
+```bash
+npm run pack:linux
+# Outputs AppImage artifacts in release/
+```
+
+If the app is launched from a stripped-down desktop session and terminal mode cannot find Node, set `CLOE_NODE` to the full path of your system Node binary before launching.
+
 ### Android
 
 Cloe Android is a floating widget that mirrors the desktop character on your phone. It connects to the desktop bridge over your local network (or [Tailscale](https://tailscale.com/) for remote access).

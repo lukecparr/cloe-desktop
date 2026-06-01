@@ -44,15 +44,17 @@ function handleMsg(msg) {
   switch (msg.cmd) {
     case 'spawn':
       if (ptyProc) return; // already running
-      const shell = '/bin/zsh';
-      ptyProc = pty.spawn(shell, [], {
+      const shell = process.env.SHELL || (process.platform === 'darwin' ? '/bin/zsh' : '/bin/bash');
+      const home = process.env.HOME || require('os').homedir();
+      const shellArgs = process.platform === 'win32' ? [] : [];
+      ptyProc = pty.spawn(shell, shellArgs, {
         name: 'xterm-256color',
         cols: msg.cols || 80,
         rows: msg.rows || 24,
-        cwd: process.env.HOME || '/Users/lijian',
+        cwd: home,
         env: {
           ...process.env,
-          HOME: process.env.HOME || '/Users/lijian',
+          HOME: home,
           SHELL: shell,
           TERM: 'xterm-256color',
           COLORTERM: 'truecolor',

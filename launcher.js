@@ -24,6 +24,17 @@ const HTTP_PORT = 19851;
 // Bind to 0.0.0.0 so external clients (Android via Tailscale) can connect
 const BRIDGE_HOST = '0.0.0.0';
 
+function getDefaultShell() {
+  if (process.env.SHELL) return process.env.SHELL;
+  if (process.platform === 'win32') return process.env.ComSpec || 'powershell.exe';
+  if (process.platform === 'darwin') return '/bin/zsh';
+  return '/bin/bash';
+}
+
+function getDefaultHome() {
+  return process.env.HOME || os.homedir();
+}
+
 let win;
 let managerWin = null;
 let tray = null;
@@ -2314,32 +2325,49 @@ ipcMain.on('window-move', (_e, { dx, dy }) => {
   }
 });
 
-// ==================== PTY (direct in Electron main process) ====================
+// ==================== PTY ====================
+// macOS keeps the direct Electron native module path. Linux uses the proxy so
+// node-pty is loaded by system Node instead of Electron's ABI, which makes
+// Raspberry Pi/Linux packaging much less fragile.
 let ptyProc = null;
 let ptyReady = false;
+let ptyProxyBuf = '';
+
+function getPtyProxyScriptPath() {
+  if (app.isPackaged) return path.join(process.resourcesPath, 'scripts', 'pty-proxy.js');
+  return path.join(__dirname, 'scripts', 'pty-proxy.js');
+}
 
 function spawnPty(cols, rows) {
   if (ptyProc || ptyReady) return;
+  if (process.platform === 'linux') {
+    spawnPtyProxy(cols, rows);
+    return;
+  }
+  spawnPtyDirect(cols, rows);
+}
+
+function spawnPtyDirect(cols, rows) {
   try {
     const pty = require('node-pty');
-    const shell = '/bin/zsh';
-    ptyProc = pty.spawn(shell, ['-l'], {
+    const shell = getDefaultShell();
+    const home = getDefaultHome();
+    const shellArgs = process.platform === 'win32' ? [] : ['-l'];
+    ptyProc = pty.spawn(shell, shellArgs, {
       name: 'xterm-256color',
       cols: cols || 80,
       rows: rows || 24,
-      cwd: process.env.HOME || '/Users/lijian',
+      cwd: home,
       env: {
         ...process.env,
-        HOME: process.env.HOME || '/Users/lijian',
+        HOME: home,
         SHELL: shell,
         TERM: 'xterm-256color',
         COLORTERM: 'truecolor',
       },
     });
     ptyProc.onData((data) => {
-      if (win && !win.isDestroyed()) {
-        win.webContents.send('pty-data', data);
-      }
+      if (win && !win.isDestroyed()) win.webContents.send('pty-data', data);
     });
     ptyProc.onExit(({ exitCode }) => {
       console.log(`[PTY] Shell exited with code ${exitCode}`);
@@ -2353,16 +2381,70 @@ function spawnPty(cols, rows) {
   }
 }
 
+function spawnPtyProxy(cols, rows) {
+  const nodeBin = process.env.CLOE_NODE || 'node';
+  const script = getPtyProxyScriptPath();
+  try {
+    ptyProc = spawn(nodeBin, [script], {
+      cwd: getDefaultHome(),
+      env: { ...process.env, HOME: getDefaultHome(), SHELL: getDefaultShell() },
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    ptyProc.stdout.setEncoding('utf8');
+    ptyProc.stdout.on('data', handlePtyProxyData);
+    ptyProc.stderr.on('data', (data) => console.error('[PTY proxy]', data.toString().trim()));
+    ptyProc.on('exit', (exitCode) => {
+      console.log(`[PTY proxy] exited with code ${exitCode}`);
+      ptyProc = null;
+      ptyReady = false;
+      ptyProxyBuf = '';
+    });
+    sendPtyProxy({ cmd: 'spawn', cols: cols || 80, rows: rows || 24 });
+  } catch (e) {
+    console.error('[PTY proxy] Failed to spawn:', e.message);
+    ptyProc = null;
+  }
+}
+
+function handlePtyProxyData(chunk) {
+  ptyProxyBuf += chunk;
+  let idx;
+  while ((idx = ptyProxyBuf.indexOf('\n')) !== -1) {
+    const line = ptyProxyBuf.slice(0, idx).trim();
+    ptyProxyBuf = ptyProxyBuf.slice(idx + 1);
+    if (!line) continue;
+    try {
+      const msg = JSON.parse(line);
+      if (msg.type === 'ready') ptyReady = true;
+      if (msg.type === 'data' && win && !win.isDestroyed()) win.webContents.send('pty-data', msg.data);
+      if (msg.type === 'exit') {
+        ptyProc = null;
+        ptyReady = false;
+      }
+    } catch (e) {
+      console.warn('[PTY proxy] Ignoring malformed message:', line);
+    }
+  }
+}
+
+function sendPtyProxy(msg) {
+  if (ptyProc && ptyProc.stdin.writable) ptyProc.stdin.write(JSON.stringify(msg) + '\n');
+}
+
 ipcMain.on('pty-spawn', (_e, { cols, rows }) => {
   spawnPty(cols, rows);
 });
 
 ipcMain.on('pty-write', (_e, data) => {
-  if (ptyProc) ptyProc.write(data || '');
+  if (!ptyProc) return;
+  if (process.platform === 'linux') sendPtyProxy({ cmd: 'write', data: data || '' });
+  else ptyProc.write(data || '');
 });
 
 ipcMain.on('pty-resize', (_e, { cols, rows }) => {
-  if (ptyProc) ptyProc.resize(cols || 80, rows || 24);
+  if (!ptyProc) return;
+  if (process.platform === 'linux') sendPtyProxy({ cmd: 'resize', cols: cols || 80, rows: rows || 24 });
+  else ptyProc.resize(cols || 80, rows || 24);
 });
 
 // ==================== Window Mode ====================
@@ -2997,7 +3079,7 @@ function createAppMenu() {
       submenu: [
         { role: 'about', label: `关于 ${app.name}` },
         { type: 'separator' },
-        { label: '设置...', accelerator: 'Cmd+,', click: () => createManagerWindow() },
+        { label: '设置...', accelerator: 'CommandOrControl+,', click: () => createManagerWindow() },
         { type: 'separator' },
         { role: 'services', label: '服务' },
         { type: 'separator' },
@@ -3051,12 +3133,12 @@ function createAppMenu() {
 // ==================== Bootstrap ====================
 
 // Fix PATH for packaged app — macOS GUI apps get a minimal PATH from launchd,
-// missing Homebrew, Hermes, and other shell-configured paths.
-// Run a login shell to capture the full PATH and merge into process.env.
+// missing Homebrew, Hermes, and other shell-configured paths. Linux desktop
+// launchers can have the same problem, so capture PATH from the user's shell.
 async function fixPath() {
   const { execSync } = require('child_process');
   try {
-    const shellPath = process.env.SHELL || '/bin/zsh';
+    const shellPath = getDefaultShell();
     const loginPath = execSync(`${shellPath} -l -c 'echo $PATH'`, {
       encoding: 'utf8',
       timeout: 5000,

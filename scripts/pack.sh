@@ -1,19 +1,39 @@
 #!/bin/bash
-# Cloe Desktop — 一键打包 DMG
-# 用法: ./scripts/pack.sh [--dir] [--install]
-#   默认打包 DMG
-#   --dir     只打包目录（调试用，快很多）
-#   --install 打包后部署到 /Applications 并启动（自动检测架构目录）
+# Cloe Desktop — one-command package helper
+# Usage: ./scripts/pack.sh [--dir] [--install] [--linux|--mac]
+#   default     package for the current platform (macOS -> DMG, Linux -> AppImage/deb)
+#   --dir       package unpacked directory only (faster for debugging)
+#   --install   after macOS build, deploy to /Applications and launch
+#   --linux     force Linux target
+#   --mac       force macOS target
 
 set -e
 cd "$(dirname "$0")/.."
 
 INSTALL=false
+DIR_MODE=false
+TARGET_PLATFORM=""
 for arg in "$@"; do
   [[ "$arg" == "--install" ]] && INSTALL=true
+  [[ "$arg" == "--dir" ]] && DIR_MODE=true
+  [[ "$arg" == "--linux" ]] && TARGET_PLATFORM="linux"
+  [[ "$arg" == "--mac" ]] && TARGET_PLATFORM="mac"
 done
 
-echo "=== Cloe Desktop 打包 ==="
+if [[ -z "$TARGET_PLATFORM" ]]; then
+  case "$(uname -s)" in
+    Darwin) TARGET_PLATFORM="mac" ;;
+    Linux) TARGET_PLATFORM="linux" ;;
+    *) echo "Unsupported platform: $(uname -s)"; exit 1 ;;
+  esac
+fi
+
+if [[ "$TARGET_PLATFORM" != "mac" && "$INSTALL" == "true" ]]; then
+  echo "--install is currently only supported for macOS /Applications builds"
+  exit 1
+fi
+
+echo "=== Cloe Desktop package ($TARGET_PLATFORM) ==="
 
 # [0] 清理旧产物，确保全量重建
 echo "[0/3] 清理旧构建产物..."
@@ -70,22 +90,37 @@ else
 fi
 
 # [3] electron-builder
-if [[ "$1" == "--dir" ]]; then
-    echo "[3/3] electron-builder --dir..."
-    ./node_modules/.bin/electron-builder --mac --dir
-    echo ""
-    echo "=== 完成! ==="
-    echo "App: release/mac/Cloe.app"
-    echo "运行: open release/mac/Cloe.app"
+BUILDER_ARGS=("--$TARGET_PLATFORM")
+if $DIR_MODE; then
+    BUILDER_ARGS+=("--dir")
+fi
+if [[ "$TARGET_PLATFORM" == "linux" ]]; then
+    # Linux terminal mode uses scripts/pty-proxy.js under system Node, so do not
+    # rebuild node-pty against Electron's ABI during packaging.
+    BUILDER_ARGS+=("-c.npmRebuild=false")
+fi
+
+echo "[3/3] electron-builder ${BUILDER_ARGS[*]}..."
+./node_modules/.bin/electron-builder "${BUILDER_ARGS[@]}"
+echo ""
+echo "=== 完成! ==="
+
+if [[ "$TARGET_PLATFORM" == "mac" ]]; then
+    if $DIR_MODE; then
+        echo "App: release/mac/Cloe.app (or release/mac-*/Cloe.app)"
+        echo "运行: open release/mac/Cloe.app"
+    else
+        DMG=$(ls -t release/*.dmg 2>/dev/null | head -1)
+        if [[ -n "$DMG" ]]; then
+            SIZE=$(du -h "$DMG" | cut -f1)
+            echo "DMG: $DMG ($SIZE)"
+        fi
+    fi
 else
-    echo "[3/3] electron-builder --mac (DMG)..."
-    ./node_modules/.bin/electron-builder --mac
-    echo ""
-    echo "=== 完成! ==="
-    DMG=$(ls -t release/*.dmg 2>/dev/null | head -1)
-    if [[ -n "$DMG" ]]; then
-        SIZE=$(du -h "$DMG" | cut -f1)
-        echo "DMG: $DMG ($SIZE)"
+    echo "Linux artifacts:"
+    find release -maxdepth 2 -type f \( -name '*.AppImage' -o -name '*.deb' \) -print 2>/dev/null || true
+    if $DIR_MODE; then
+        echo "Unpacked app: release/linux-*"
     fi
 fi
 
