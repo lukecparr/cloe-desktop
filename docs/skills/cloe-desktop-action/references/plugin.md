@@ -1,10 +1,10 @@
-# Hermes Plugin 自动触发
+# Hermes Plugin Auto-Trigger
 
-`~/.hermes/plugins/cloe-desktop/` 监听 Hermes 生命周期事件，自动触发 Cloe 表情动作。
+`~/.hermes/plugins/cloe-desktop/` listens for Hermes lifecycle events and automatically triggers Cloe's expression/actions.
 
-## 触发规则
+## Trigger Rules
 
-配置文件：`~/.cloe/plugin-rules.json`（5 秒缓存自动刷新）
+Config file: `~/.cloe/plugin-rules.json` (5-second cache, auto-refreshes)
 
 ```json
 {
@@ -12,7 +12,7 @@
   "tool_expressions": {},
   "tool_completions": { "delegate_task": "clap", "execute_code": "nod" },
   "keyword_map": [
-    { "keywords": ["晚安", "睡了"], "action": "kiss" }
+    { "keywords": ["good night", "going to sleep"], "action": "kiss" }
   ],
   "context_thresholds": {
     "warning": { "pct": 75, "action": "think" },
@@ -21,37 +21,37 @@
 }
 ```
 
-- `min_interval`：两次动作之间最小间隔（秒）
-- `tool_expressions`：工具执行前的表情映射（当前 working 由 `pre_llm_call` 触发，不需要 per-tool）
-- `tool_completions`：工具完成后的表情映射
-- `keyword_map`：关键词匹配列表，命中时触发对应动作
-- `context_thresholds`：上下文用量阈值触发（`pct` 为百分比）
+- `min_interval`: minimum interval between two actions (seconds)
+- `tool_expressions`: expression mapping before a tool runs (currently `working` is triggered by `pre_llm_call`, so no per-tool mapping is needed)
+- `tool_completions`: expression mapping after a tool finishes
+- `keyword_map`: list of keyword matches; triggers the corresponding action on a hit
+- `context_thresholds`: triggers based on context usage thresholds (`pct` is a percentage)
 
-## Hook 监听表
+## Hook Listener Table
 
-| Hook | 时机 | 动作 |
+| Hook | Timing | Action |
 |------|------|------|
-| `on_session_start` | 新 session | wave |
-| `on_session_end` | 正常结束 | kiss |
-| `on_session_end` | 被中断 | shake_head |
-| `pre_tool_call` | 工具执行前 | 按 `tool_expressions` |
-| `post_tool_call` | 工具完成后 | 按 `tool_completions` |
-| `pre_llm_call` | LLM 调用前 | working |
-| `post_llm_call` | LLM 调用后 | idle（超长→yawn） |
-| `post_api_request` | API 请求后 | context 阈值检查 |
-| `subagent_stop` | 子 agent 完成 | 成功→clap / 失败→shake_head |
+| `on_session_start` | new session | wave |
+| `on_session_end` | ended normally | kiss |
+| `on_session_end` | interrupted | shake_head |
+| `pre_tool_call` | before a tool runs | per `tool_expressions` |
+| `post_tool_call` | after a tool finishes | per `tool_completions` |
+| `pre_llm_call` | before an LLM call | working |
+| `post_llm_call` | after an LLM call | idle (yawn if it took too long) |
+| `post_api_request` | after an API request | context threshold check |
+| `subagent_stop` | subagent finished | success -> clap / failure -> shake_head |
 
-## 热加载说明
+## Hot Reload Notes
 
-- `plugin-rules.json`：5 秒 TTL 缓存，修改后自动刷新
-- `plugin.yaml` 的 hooks 配置：**不支持热加载**，修改后必须重启 Hermes gateway 进程（gateway 模式）或 TUI 进程（`hermes --tui`）
+- `plugin-rules.json`: 5-second TTL cache, refreshes automatically after changes
+- `plugin.yaml` hooks config: **does not support hot reload** -- after changes, you must restart the Hermes gateway process (gateway mode) or TUI process (`hermes --tui`)
 
-## Gateway hooks vs Plugin hooks
+## Gateway Hooks vs Plugin Hooks
 
 | | Gateway hooks | Plugin hooks |
 |---|---|---|
-| 位置 | `~/.hermes/hooks/` | `~/.hermes/plugins/` |
-| 触发范围 | 仅 GatewayRunner | 所有模式（gateway、TUI、直接调用） |
-| TUI 兼容 | ❌ TUI 下不触发 | ✅ 所有模式都触发 |
+| Location | `~/.hermes/hooks/` | `~/.hermes/plugins/` |
+| Trigger scope | GatewayRunner only | all modes (gateway, TUI, direct calls) |
+| TUI compatibility | Does not trigger under TUI | Triggers in all modes |
 
-因此，working/idle 等关键动作**必须依赖 plugin hooks**，不能只依赖 gateway hooks。
+So, key actions like working/idle **must rely on plugin hooks** -- they can't depend solely on gateway hooks.

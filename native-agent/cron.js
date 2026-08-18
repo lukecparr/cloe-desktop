@@ -1,24 +1,24 @@
 'use strict';
 
 /**
- * Native Agent Cron — 定时任务调度
+ * Native Agent Cron — scheduled task dispatch
  *
- * 存储在 ~/.cloe/native-agent-cron.json
+ * Stored in ~/.cloe/native-agent-cron.json
  *
- * 结构: [{
+ * Structure: [{
  *   id, name, schedule, prompt, channel, target,
  *   enabled, lastRun, nextRun, runCount
  * }]
  *
- * schedule 格式:
- *   - cron expression (standard 5-field): "30 9 * * *" (每天9:30)
+ * schedule format:
+ *   - cron expression (standard 5-field): "30 9 * * *" (daily at 9:30)
  *   - interval: "5m", "2h", "30s"
  *   - ISO timestamp (one-shot): "2026-08-01T09:00:00"
  *
- * 每次 tick:
- *   1. 检查所有 enabled 的 job
- *   2. 如果 nextRun <= now → 执行 → 更新 lastRun/nextRun
- *   3. 执行 = 通过 channels.handleMessage() 以 job.prompt 作为用户消息
+ * Each tick:
+ *   1. Check all enabled jobs
+ *   2. If nextRun <= now → run it → update lastRun/nextRun
+ *   3. Running = calling channels.handleMessage() with job.prompt as the user message
  */
 
 const fs = require('fs');

@@ -32,12 +32,12 @@ function formatRelative(iso) {
   if (!iso) return '';
   const diff = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return t('刚刚', 'just now');
-  if (mins < 60) return t(`${mins}分钟前`, `${mins}m ago`);
+  if (mins < 1) return t('just now', 'just now');
+  if (mins < 60) return t(`${mins}m ago`, `${mins}m ago`);
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return t(`${hours}小时前`, `${hours}h ago`);
+  if (hours < 24) return t(`${hours}h ago`, `${hours}h ago`);
   const days = Math.floor(hours / 24);
-  return t(`${days}天前`, `${days}d ago`);
+  return t(`${days}d ago`, `${days}d ago`);
 }
 
 function formatNextTime(triggerAtIso) {
@@ -46,9 +46,9 @@ function formatNextTime(triggerAtIso) {
     const diffMs = target - Date.now();
     if (diffMs <= 0) return '';
     const diffMin = Math.round(diffMs / 60000);
-    if (diffMin < 1) return t('即将提醒', 'soon');
-    if (diffMin < 60) return t(`${diffMin}分钟后`, `in ${diffMin}m`);
-    const targetStr = target.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+    if (diffMin < 1) return t('soon', 'soon');
+    if (diffMin < 60) return t(`in ${diffMin}m`, `in ${diffMin}m`);
+    const targetStr = target.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
     return targetStr;
   } catch {
     return '';
@@ -58,10 +58,10 @@ function formatNextTime(triggerAtIso) {
 // ==================== Agent Session Card ====================
 
 const SESSION_STATUS = {
-  idle:           { label: t('待发送', 'Idle'),      color: '#4d9eff', pulse: false, blink: true },
-  working:        { label: t('运行中', 'Running'),   color: '#4d9eff', pulse: true,  blink: true },
-  turn_complete:  { label: t('已就绪', 'Ready'),     color: '#3dd68c', pulse: false, icon: 'check' },
-  needs_decision: { label: t('待确认', 'Waiting'),   color: '#f5a623', pulse: true,  icon: 'alert' },
+  idle:           { label: t('Idle', 'Idle'),      color: '#4d9eff', pulse: false, blink: true },
+  working:        { label: t('Running', 'Running'),   color: '#4d9eff', pulse: true,  blink: true },
+  turn_complete:  { label: t('Ready', 'Ready'),     color: '#3dd68c', pulse: false, icon: 'check' },
+  needs_decision: { label: t('Waiting', 'Waiting'),   color: '#f5a623', pulse: true,  icon: 'alert' },
 };
 
 function SessionIcon({ icon, color }) {
@@ -141,9 +141,9 @@ function SessionCard({ session, onSetTitle, onCancel, onMute, onOpen, onDelete }
           <>
             <div className="wp-session-name" onClick={(e) => { if (isInternal) { e.stopPropagation(); setEditingTitle(true); } else { setEditingTitle(true); } }}>{displayName}</div>
             <div className="wp-session-meta">
-              <span className="wp-session-source">{isInternal ? t('内部', 'Internal') : session.source_label}</span>
+              <span className="wp-session-source">{isInternal ? t('Internal', 'Internal') : session.source_label}</span>
               {session.turn_count > 0 && <span className="wp-session-dot-sep">·</span>}
-              {session.turn_count > 0 && <span>{session.turn_count} {t('轮', 'turns')}</span>}
+              {session.turn_count > 0 && <span>{session.turn_count} {t('turns', 'turns')}</span>}
               <span className="wp-session-dot-sep">·</span>
               <span>{formatTime(session.created_at)}</span>
             </div>
@@ -159,7 +159,7 @@ function SessionCard({ session, onSetTitle, onCancel, onMute, onOpen, onDelete }
             <button
               className={`wp-session-mute${session.muted ? ' active' : ''}`}
               onClick={(e) => { e.stopPropagation(); onMute?.(session.id, !session.muted); }}
-              title={session.muted ? t('取消静音', 'Unmute session') : t('静音提醒', 'Mute session alerts')}
+              title={session.muted ? t('Unmute session', 'Unmute session') : t('Mute session alerts', 'Mute session alerts')}
             >
               {session.muted ? (
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -182,7 +182,7 @@ function SessionCard({ session, onSetTitle, onCancel, onMute, onOpen, onDelete }
                 <line x1="10" y1="14" x2="21" y2="3" />
               </svg>
             </button>
-            <button className="wp-session-cancel" onClick={(e) => { e.stopPropagation(); onDelete?.(session.id); }} title={t('删除', 'Delete')}>
+            <button className="wp-session-cancel" onClick={(e) => { e.stopPropagation(); onDelete?.(session.id); }} title={t('Delete', 'Delete')}>
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
               </svg>
@@ -193,7 +193,7 @@ function SessionCard({ session, onSetTitle, onCancel, onMute, onOpen, onDelete }
             <button
               className={`wp-session-mute${session.muted ? ' active' : ''}`}
               onClick={(e) => { e.stopPropagation(); onMute?.(session.id, !session.muted); }}
-              title={session.muted ? t('取消静音', 'Unmute session') : t('静音提醒', 'Mute session alerts')}
+              title={session.muted ? t('Unmute session', 'Unmute session') : t('Mute session alerts', 'Mute session alerts')}
             >
               {session.muted ? (
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -209,7 +209,7 @@ function SessionCard({ session, onSetTitle, onCancel, onMute, onOpen, onDelete }
                 </svg>
               )}
             </button>
-            <button className="wp-session-cancel" onClick={(e) => { e.stopPropagation(); onCancel(session.id); }} title={t('取消监听', 'Cancel')}>
+            <button className="wp-session-cancel" onClick={(e) => { e.stopPropagation(); onCancel(session.id); }} title={t('Cancel', 'Cancel')}>
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
               </svg>
@@ -269,7 +269,7 @@ function TaskCard({ task, dragIndex, isTiming, onToggleComplete, onStartStop, on
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
-      <div className="wp-task-handle" title={isCompleted ? t('已完成任务不参与排序', 'Completed tasks stay at the end') : t('拖拽调整优先级', 'Drag to reorder priority')}>
+      <div className="wp-task-handle" title={isCompleted ? t('Completed tasks stay at the end', 'Completed tasks stay at the end') : t('Drag to reorder priority', 'Drag to reorder priority')}>
         <svg width="8" height="12" viewBox="0 0 8 12" fill="currentColor" opacity="0.2">
           <circle cx="2" cy="2" r="1.2"/><circle cx="6" cy="2" r="1.2"/>
           <circle cx="2" cy="6" r="1.2"/><circle cx="6" cy="6" r="1.2"/>
@@ -280,7 +280,7 @@ function TaskCard({ task, dragIndex, isTiming, onToggleComplete, onStartStop, on
         className={`wp-task-check${isCompleted ? ' checked' : ''}`}
         draggable={false}
         onClick={() => onToggleComplete(task.id, isCompleted)}
-        title={isCompleted ? t('恢复', 'Reopen') : t('完成', 'Complete')}
+        title={isCompleted ? t('Reopen', 'Reopen') : t('Complete', 'Complete')}
       >
         {isCompleted && (
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
@@ -292,7 +292,7 @@ function TaskCard({ task, dragIndex, isTiming, onToggleComplete, onStartStop, on
       <div className="wp-task-main" onClick={() => onEdit(task)}>
         <div className="wp-task-title-row">
           <span className="wp-task-title">{task.title}</span>
-          {isTiming && <span className="wp-task-focus-tag">{t('专注中', 'Focusing')}</span>}
+          {isTiming && <span className="wp-task-focus-tag">{t('Focusing', 'Focusing')}</span>}
         </div>
         {task.tags && task.tags.length > 0 && (
           <div className="wp-task-tags">
@@ -309,7 +309,7 @@ function TaskCard({ task, dragIndex, isTiming, onToggleComplete, onStartStop, on
             className={`wp-task-play${isTiming ? ' active' : ''}`}
             draggable={false}
             onClick={() => onStartStop(task.id, isTiming)}
-            title={isTiming ? t('取消专注', 'Unfocus') : t('专注', 'Focus')}
+            title={isTiming ? t('Unfocus', 'Unfocus') : t('Focus', 'Focus')}
           >
             {isTiming ? (
               <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor">
@@ -323,7 +323,7 @@ function TaskCard({ task, dragIndex, isTiming, onToggleComplete, onStartStop, on
             )}
           </button>
         )}
-        <button className="wp-task-delete" draggable={false} onClick={() => onDelete(task.id)} title={t('删除', 'Delete')}>
+        <button className="wp-task-delete" draggable={false} onClick={() => onDelete(task.id)} title={t('Delete', 'Delete')}>
           <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
             <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
           </svg>
@@ -415,14 +415,14 @@ function TaskEditor({ task, onSave, onCancel }) {
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={t('任务标题', 'Task title')}
+          placeholder={t('Task title', 'Task title')}
         />
         <textarea
           className="wp-editor-content"
           value={content}
           onChange={(e) => setContent(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={t('详细内容（可选）', 'Details (optional)')}
+          placeholder={t('Details (optional)', 'Details (optional)')}
           rows={6}
         />
         <div className="wp-editor-tags">
@@ -444,8 +444,8 @@ function TaskEditor({ task, onSave, onCancel }) {
               </span>
             ) : (
               <span key={i} className="wp-tag-chip wp-tag-removable">
-                <span onDoubleClick={() => startEditTag(i)} title={t('双击编辑', 'Double-click to edit')}>#{tag}</span>
-                <button type="button" onClick={() => removeTag(i)} title={t('移除', 'Remove')}>×</button>
+                <span onDoubleClick={() => startEditTag(i)} title={t('Double-click to edit', 'Double-click to edit')}>#{tag}</span>
+                <button type="button" onClick={() => removeTag(i)} title={t('Remove', 'Remove')}>×</button>
               </span>
             )
           ))}
@@ -463,18 +463,18 @@ function TaskEditor({ task, onSave, onCancel }) {
                   if (e.key === 'Backspace' && !tagDraft && tags.length) { e.preventDefault(); removeTag(tags.length - 1); }
                   if (e.key === 'Escape') { e.preventDefault(); setTagDraft(''); setTagEditing(false); }
                 }}
-                placeholder={t('标签', 'tag')}
+                placeholder={t('tag', 'tag')}
               />
             </span>
           ) : (
-            <button type="button" className="wp-tag-add-btn" onClick={startTagEdit} title={t('添加标签', 'Add tag')}>
-              {tags.length ? '#' : t('# 添加标签', '# Add tag')}
+            <button type="button" className="wp-tag-add-btn" onClick={startTagEdit} title={t('Add tag', 'Add tag')}>
+              {tags.length ? '#' : t('# Add tag', '# Add tag')}
             </button>
           )}
         </div>
         <div className="wp-editor-actions">
-          <button className="wp-editor-cancel" onClick={onCancel}>{t('取消', 'Cancel')}</button>
-          <button className="wp-editor-save" onClick={handleSave}>{t('保存', 'Save')}</button>
+          <button className="wp-editor-cancel" onClick={onCancel}>{t('Cancel', 'Cancel')}</button>
+          <button className="wp-editor-save" onClick={handleSave}>{t('Save', 'Save')}</button>
         </div>
       </div>
     </div>
@@ -484,11 +484,11 @@ function TaskEditor({ task, onSave, onCancel }) {
 // ==================== Reminder Card (full — matches settings page) ====================
 
 const RM_STATUS = {
-  idle:       { label: t('就绪', 'Ready'),     color: 'rgba(255,255,255,0.3)' },
-  running:    { label: t('运行中', 'Running'),   color: '#4d9eff' },
-  paused:     { label: t('已暂停', 'Paused'),    color: '#f5a623' },
-  triggered:  { label: t('到时', 'Due'),         color: '#3dd68c' },
-  completed:  { label: t('完成', 'Done'),        color: 'rgba(255,255,255,0.2)' },
+  idle:       { label: t('Ready', 'Ready'),     color: 'rgba(255,255,255,0.3)' },
+  running:    { label: t('Running', 'Running'),   color: '#4d9eff' },
+  paused:     { label: t('Paused', 'Paused'),    color: '#f5a623' },
+  triggered:  { label: t('Due', 'Due'),         color: '#3dd68c' },
+  completed:  { label: t('Done', 'Done'),        color: 'rgba(255,255,255,0.2)' },
 };
 
 function ReminderCard({ reminder, onToggle, onPauseResume, onDismiss, onDelete, onEdit }) {
@@ -507,7 +507,7 @@ function ReminderCard({ reminder, onToggle, onPauseResume, onDismiss, onDelete, 
     if (!isRunning || !r.trigger_at) return;
     const update = () => {
       const diff = new Date(r.trigger_at).getTime() - Date.now();
-      if (diff <= 0) { setRemaining(t('即将提醒', 'soon')); return; }
+      if (diff <= 0) { setRemaining(t('soon', 'soon')); return; }
       const m = Math.floor(diff / 60000);
       const s = Math.floor((diff % 60000) / 1000);
       setRemaining(`${m}:${String(s).padStart(2,'0')}`);
@@ -536,7 +536,7 @@ function ReminderCard({ reminder, onToggle, onPauseResume, onDismiss, onDelete, 
       <div className="wp-rm-body">
         <div className="wp-rm-name">{r.name}</div>
         <div className="wp-rm-meta">
-          <span>{isCountdown ? t('番茄钟', 'Countdown') : t('每', 'Every')} {durMin}{t('分钟', 'min')}</span>
+          <span>{isCountdown ? t('Countdown', 'Countdown') : t('Every', 'Every')} {durMin}{t('min', 'min')}</span>
           {roundInfo && <><span className="wp-rm-dot"></span><span>{roundInfo}</span></>}
           {!r.tts && <><span className="wp-rm-dot"></span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"/></svg></>}
           {isRunning && nextTime && <><span className="wp-rm-dot"></span><span className="wp-rm-next">{remaining || nextTime}</span></>}
@@ -547,27 +547,27 @@ function ReminderCard({ reminder, onToggle, onPauseResume, onDismiss, onDelete, 
         <span className="wp-rm-badge wp-rm-status-{r.status}" style={{ color: cfg.color, background: cfg.color + '14' }}>{cfg.label}</span>
         <div className="wp-rm-btns">
           {isRunning && (
-            <button className="wp-rm-btn" onClick={() => onPauseResume(r.id, 'pause')} title={t('暂停', 'Pause')}>
+            <button className="wp-rm-btn" onClick={() => onPauseResume(r.id, 'pause')} title={t('Pause', 'Pause')}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
             </button>
           )}
           {isPaused && (
-            <button className="wp-rm-btn" onClick={() => onPauseResume(r.id, 'resume')} title={t('继续', 'Resume')}>
+            <button className="wp-rm-btn" onClick={() => onPauseResume(r.id, 'resume')} title={t('Resume', 'Resume')}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
             </button>
           )}
           {isTriggered && (
-            <button className="wp-rm-btn wp-rm-btn-accent" onClick={() => onDismiss(r.id)} title={t('知道了', 'Dismiss')}>
+            <button className="wp-rm-btn wp-rm-btn-accent" onClick={() => onDismiss(r.id)} title={t('Dismiss', 'Dismiss')}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
             </button>
           )}
-          <button className={`wp-rm-btn${r.enabled ? ' wp-rm-btn-on' : ''}`} onClick={() => onToggle(r.id)} title={r.enabled ? t('关闭', 'Disable') : t('启用', 'Enable')}>
+          <button className={`wp-rm-btn${r.enabled ? ' wp-rm-btn-on' : ''}`} onClick={() => onToggle(r.id)} title={r.enabled ? t('Disable', 'Disable') : t('Enable', 'Enable')}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity={r.enabled ? 1 : 0.5}><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
           </button>
-          <button className="wp-rm-btn" onClick={() => onEdit(r)} title={t('编辑', 'Edit')}>
+          <button className="wp-rm-btn" onClick={() => onEdit(r)} title={t('Edit', 'Edit')}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           </button>
-          <button className="wp-rm-btn wp-rm-btn-danger" onClick={() => onDelete(r.id)} title={t('删除', 'Delete')}>
+          <button className="wp-rm-btn wp-rm-btn-danger" onClick={() => onDelete(r.id)} title={t('Delete', 'Delete')}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
           </button>
         </div>
@@ -620,7 +620,7 @@ function ReminderFormModal({ reminder, availableActions, onSave, onCancel }) {
     <div className="wp-editor-overlay" onClick={onCancel}>
       <div className="wp-rm-form-modal" onClick={(e) => e.stopPropagation()}>
         <div className="wp-rm-form-head">
-          <span className="wp-rm-form-title">{isEdit ? t('编辑提醒', 'Edit Reminder') : t('添加提醒', 'Add Reminder')}</span>
+          <span className="wp-rm-form-title">{isEdit ? t('Edit Reminder', 'Edit Reminder') : t('Add Reminder', 'Add Reminder')}</span>
           <button className="wp-rm-form-close" onClick={onCancel}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
@@ -628,7 +628,7 @@ function ReminderFormModal({ reminder, availableActions, onSave, onCancel }) {
 
         <div className="wp-rm-form-row">
           <div className="wp-rm-field">
-            <label className="wp-rm-label">{t('名称', 'Name')}</label>
+            <label className="wp-rm-label">{t('Name', 'Name')}</label>
             <input
               ref={nameRef}
               type="text"
@@ -636,46 +636,46 @@ function ReminderFormModal({ reminder, availableActions, onSave, onCancel }) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={t('提醒名称', 'Reminder name')}
+              placeholder={t('Reminder name', 'Reminder name')}
             />
           </div>
           <div className="wp-rm-field wp-rm-field-sm">
-            <label className="wp-rm-label">{t('模式', 'Mode')}</label>
+            <label className="wp-rm-label">{t('Mode', 'Mode')}</label>
             <div className="wp-rm-segments">
-              <button className={`wp-rm-seg${mode === 'interval' ? ' active' : ''}`} onClick={() => setMode('interval')}>{t('周期', 'Interval')}</button>
-              <button className={`wp-rm-seg${mode === 'countdown' ? ' active' : ''}`} onClick={() => setMode('countdown')}>{t('番茄钟', 'Countdown')}</button>
+              <button className={`wp-rm-seg${mode === 'interval' ? ' active' : ''}`} onClick={() => setMode('interval')}>{t('Interval', 'Interval')}</button>
+              <button className={`wp-rm-seg${mode === 'countdown' ? ' active' : ''}`} onClick={() => setMode('countdown')}>{t('Countdown', 'Countdown')}</button>
             </div>
           </div>
         </div>
 
         <div className="wp-rm-form-row">
           <div className="wp-rm-field wp-rm-field-sm">
-            <label className="wp-rm-label">{t('时长', 'Duration')}</label>
+            <label className="wp-rm-label">{t('Duration', 'Duration')}</label>
             <div className="wp-rm-input-group">
               <input type="number" className="wp-rm-input wp-rm-input-narrow" min="1" max="720" value={duration} onChange={(e) => setDuration(Math.max(1, parseInt(e.target.value) || 1))} onKeyDown={handleKeyDown} />
-              <span className="wp-rm-unit">{t('分钟', 'min')}</span>
+              <span className="wp-rm-unit">{t('min', 'min')}</span>
             </div>
           </div>
           {isCountdown && (
             <div className="wp-rm-field wp-rm-field-sm">
-              <label className="wp-rm-label">{t('休息时长', 'Break')}</label>
+              <label className="wp-rm-label">{t('Break', 'Break')}</label>
               <div className="wp-rm-input-group">
                 <input type="number" className="wp-rm-input wp-rm-input-narrow" min="0" max="120" value={breakDur} onChange={(e) => setBreakDur(Math.max(0, parseInt(e.target.value) || 0))} onKeyDown={handleKeyDown} />
-                <span className="wp-rm-unit">{t('分钟', 'min')}</span>
+                <span className="wp-rm-unit">{t('min', 'min')}</span>
               </div>
             </div>
           )}
           <div className="wp-rm-field wp-rm-field-sm">
-            <label className="wp-rm-label">{t('最大轮次', 'Max Rounds')}</label>
+            <label className="wp-rm-label">{t('Max Rounds', 'Max Rounds')}</label>
             <input type="number" className="wp-rm-input wp-rm-input-narrow" min="0" max="999" value={rounds} onChange={(e) => setRounds(Math.max(0, parseInt(e.target.value) || 0))} onKeyDown={handleKeyDown} />
           </div>
         </div>
 
         <div className="wp-rm-form-row">
           <div className="wp-rm-field">
-            <label className="wp-rm-label">{t('触发动作', 'Action')}</label>
+            <label className="wp-rm-label">{t('Action', 'Action')}</label>
             <select className="wp-rm-input wp-rm-select" value={action} onChange={(e) => setAction(e.target.value)}>
-              <option value="">{t('无', 'None')}</option>
+              <option value="">{t('None', 'None')}</option>
               {(availableActions || []).map(a => (
                 <option key={a.name} value={a.name}>{a.name}{a.description ? ` — ${a.description}` : ''}</option>
               ))}
@@ -685,18 +685,18 @@ function ReminderFormModal({ reminder, availableActions, onSave, onCancel }) {
 
         <div className="wp-rm-form-toggles">
           <label className="wp-rm-toggle-row">
-            <span className="wp-rm-toggle-label">{t('自动启动', 'Auto Start')}<span className="wp-rm-toggle-desc">{t('创建后立即开始', 'Start immediately')}</span></span>
+            <span className="wp-rm-toggle-label">{t('Auto Start', 'Auto Start')}<span className="wp-rm-toggle-desc">{t('Start immediately', 'Start immediately')}</span></span>
             <label className="wp-rm-toggle"><input type="checkbox" checked={autoStart} onChange={(e) => setAutoStart(e.target.checked)} /><span className="wp-rm-toggle-slider"></span></label>
           </label>
           <label className="wp-rm-toggle-row">
-            <span className="wp-rm-toggle-label">{t('语音播报', 'TTS')}<span className="wp-rm-toggle-desc">{t('到时间语音提醒', 'Voice alert when due')}</span></span>
+            <span className="wp-rm-toggle-label">{t('TTS', 'TTS')}<span className="wp-rm-toggle-desc">{t('Voice alert when due', 'Voice alert when due')}</span></span>
             <label className="wp-rm-toggle"><input type="checkbox" checked={tts} onChange={(e) => setTts(e.target.checked)} /><span className="wp-rm-toggle-slider"></span></label>
           </label>
         </div>
 
         <div className="wp-rm-form-foot">
-          <button className="wp-editor-cancel" onClick={onCancel}>{t('取消', 'Cancel')}</button>
-          <button className="wp-editor-save" onClick={handleSave} disabled={!name.trim()}>{t('保存', 'Save')}</button>
+          <button className="wp-editor-cancel" onClick={onCancel}>{t('Cancel', 'Cancel')}</button>
+          <button className="wp-editor-save" onClick={handleSave} disabled={!name.trim()}>{t('Save', 'Save')}</button>
         </div>
       </div>
     </div>
@@ -882,7 +882,7 @@ export default function WorkspacePanel({
               {activeTasks.length > 0 && <span className="wp-tab-count">{activeTasks.length}</span>}
             </button>
             <div className="wp-tab-spacer" />
-            <button className="wp-tab-close-btn" onClick={onClose} title={t('关闭', 'Close')}>
+            <button className="wp-tab-close-btn" onClick={onClose} title={t('Close', 'Close')}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
               </svg>
@@ -902,7 +902,7 @@ export default function WorkspacePanel({
                   <span className="wp-content-count">{activeSessions.length}</span>
                   <button className="wp-content-add" onClick={() => onSessionCreate?.()}>
                     <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 2v12M2 8h12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
-                    <span>{t('对话', 'Chat')}</span>
+                    <span>{t('Chat', 'Chat')}</span>
                   </button>
                 </div>
                 {/* Filter tabs */}
@@ -913,7 +913,7 @@ export default function WorkspacePanel({
                       className={`wp-filter-tab${sessionFilter === f ? ' active' : ''}`}
                       onClick={() => setSessionFilter(f)}
                     >
-                      {f === 'all' ? t('全部', 'All') : f === 'internal' ? t('内部', 'Internal') : t('外部', 'External')}
+                      {f === 'all' ? t('All', 'All') : f === 'internal' ? t('Internal', 'Internal') : t('External', 'External')}
                     </button>
                   ))}
                 </div>
@@ -938,7 +938,7 @@ export default function WorkspacePanel({
                       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                         <rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" />
                       </svg>
-                      <p>{t('暂无会话', 'No sessions')}</p>
+                      <p>{t('No sessions', 'No sessions')}</p>
                     </div>
                   )}
                 </div>
@@ -949,11 +949,11 @@ export default function WorkspacePanel({
             {activeTab === 'reminders' && (
               <>
                 <div className="wp-content-header">
-                  <span className="wp-content-title">{t('提醒', 'Reminders')}</span>
+                  <span className="wp-content-title">{t('Reminders', 'Reminders')}</span>
                   <span className="wp-content-count">{activeReminderCount}</span>
                   <button className="wp-content-add" onClick={() => { setEditingReminder(null); setShowReminderForm(true); }}>
                     <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 2v12M2 8h12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
-                    <span>{t('添加', 'Add')}</span>
+                    <span>{t('Add', 'Add')}</span>
                   </button>
                 </div>
                 <div className="wp-scroll-area">
@@ -973,7 +973,7 @@ export default function WorkspacePanel({
                       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                         <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
                       </svg>
-                      <p>{t('暂无提醒', 'No reminders')}</p>
+                      <p>{t('No reminders', 'No reminders')}</p>
                     </div>
                   )}
                 </div>
@@ -984,7 +984,7 @@ export default function WorkspacePanel({
             {activeTab === 'tasks' && (
               <>
                 <div className="wp-content-header">
-                  <span className="wp-content-title">{t('任务', 'Tasks')}</span>
+                  <span className="wp-content-title">{t('Tasks', 'Tasks')}</span>
                   <span className="wp-content-count">{activeTasks.length}</span>
                 </div>
                 <AddTaskInput onAdd={onTaskCreate} />
@@ -994,7 +994,7 @@ export default function WorkspacePanel({
                       className={`wp-tag-filter-chip${!effectiveTagFilter ? ' active' : ''}`}
                       onClick={() => setTaskTagFilter(null)}
                     >
-                      {t('全部', 'All')}
+                      {t('All', 'All')}
                     </button>
                     {allTaskTags.map((tag) => (
                       <button
@@ -1028,7 +1028,7 @@ export default function WorkspacePanel({
                   {completedTasks.length > 0 && (
                     <div className="wp-task-section">
                       <div className="wp-task-section-title">
-                        {t('已完成', 'Completed')}
+                        {t('Completed', 'Completed')}
                         <span className="wp-task-section-count">{completedTasks.length}</span>
                       </div>
                       {completedTasks.map((task) => (
@@ -1050,7 +1050,7 @@ export default function WorkspacePanel({
                       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
                       </svg>
-                      <p>{t('暂无任务', 'No tasks yet')}</p>
+                      <p>{t('No tasks yet', 'No tasks yet')}</p>
                     </div>
                   )}
                 </div>
@@ -1144,7 +1144,7 @@ function AddTaskInput({ onAdd }) {
       className="wp-add-inline-btn"
       onClick={handleAdd}
       disabled={!value.trim()}
-      title={t('添加', 'Add')}
+      title={t('Add', 'Add')}
     >
       <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
         <path d="M8 2v12M2 8h12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
@@ -1165,14 +1165,14 @@ function AddTaskInput({ onAdd }) {
             e.preventDefault(); removeTag(tags.length - 1);
           }
         }}
-        placeholder={t('添加新任务…', 'Add new task…')}
+        placeholder={t('Add new task…', 'Add new task…')}
       />
       <div className="wp-add-tagrow">
         <div className="wp-add-tagrow-left">
           {tags.map((tag, i) => (
             <span key={i} className="wp-tag-chip wp-tag-removable">
               #{tag}
-              <button type="button" onClick={() => removeTag(i)} title={t('移除', 'Remove')}>×</button>
+              <button type="button" onClick={() => removeTag(i)} title={t('Remove', 'Remove')}>×</button>
             </span>
           ))}
           {tagEditing ? (
@@ -1193,12 +1193,12 @@ function AddTaskInput({ onAdd }) {
                   }
                   if (e.key === 'Escape') { e.preventDefault(); setTagDraft(''); setTagEditing(false); }
                 }}
-                placeholder={t('标签', 'tag')}
+                placeholder={t('tag', 'tag')}
               />
             </span>
           ) : (
-            <button type="button" className="wp-tag-add-btn" onClick={startTagEdit} title={t('添加标签', 'Add tag')}>
-              {hasTags ? '#' : t('# 添加标签', '# Add tag')}
+            <button type="button" className="wp-tag-add-btn" onClick={startTagEdit} title={t('Add tag', 'Add tag')}>
+              {hasTags ? '#' : t('# Add tag', '# Add tag')}
             </button>
           )}
         </div>

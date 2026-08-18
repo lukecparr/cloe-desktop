@@ -1,27 +1,27 @@
-# Cloe Desktop 数据目录设计
+# Cloe Desktop Data Directory Design
 
-## 目标
+## Goals
 
-1. **跨平台**：不绑定 macOS userData，统一用 `~/.cloe/`
-2. **可配置**：app 内可修改数据目录路径
-3. **Hermes 可写**：skill 直接写文件到数据目录，app 自动识别
-4. **安装脚本**：一键初始化默认文件
+1. **Cross-platform**: not tied to macOS userData, use `~/.cloe/` uniformly
+2. **Configurable**: the data directory path can be changed within the app
+3. **Hermes can write**: a skill writes files directly to the data directory, and the app picks them up automatically
+4. **Install script**: one-command initialization of default files
 
-## 目录结构
+## Directory Structure
 
 ```
-~/.cloe/                          ← CLOE_HOME（可配置）
-├── config.json                   ← 全局配置（API key、数据目录、语言等）
-├── action-sets.json              ← 动作集配置
-├── gifs/                         ← 所有 GIF 动画
+~/.cloe/                          ← CLOE_HOME (configurable)
+├── config.json                   ← global config (API key, data directory, language, etc.)
+├── action-sets.json              ← action set config
+├── gifs/                         ← all GIF animations
 │   ├── blink.gif
 │   ├── smile.gif
-│   ├── heart.gif                 ← AI 生成 / Hermes skill 写入
-│   └── _work_heart/              ← 生成中间产物
-├── references/                   ← 参考图（每个 set 一张）
+│   ├── heart.gif                 ← AI-generated / written by a Hermes skill
+│   └── _work_heart/              ← intermediate generation artifacts
+├── references/                   ← reference images (one per set)
 │   ├── default.png
 │   └── cutekeke_63392.png
-└── audio/                        ← TTS 预录音频
+└── audio/                        ← pre-recorded TTS audio
     ├── doing.mp3
     └── done.mp3
 ```
@@ -38,49 +38,49 @@
 }
 ```
 
-- `dataDir`：数据根目录，默认 `~/.cloe`
-- Hermes skill 读 `~/.cloe/config.json` 获取 `dataDir`，写入 `dataDir/gifs/`
-- App 启动时读 `config.json`，如果 `dataDir` 不存在则创建并从 asar 复制默认文件
+- `dataDir`: the data root directory, defaults to `~/.cloe`
+- The Hermes skill reads `~/.cloe/config.json` to get `dataDir`, and writes into `dataDir/gifs/`
+- On startup, the app reads `config.json`; if `dataDir` doesn't exist, it's created and default files are copied in from the asar
 
-## 路径解析优先级
+## Path Resolution Priority
 
-App 读取文件时：
+When the app reads a file:
 
 ```
-1. {dataDir}/gifs/xxx.gif         ← 用户生成 / Hermes 写入（优先）
-2. asar:dist/gifs/xxx.gif          ← 内置默认（降级）
+1. {dataDir}/gifs/xxx.gif         ← user-generated / written by Hermes (preferred)
+2. asar:dist/gifs/xxx.gif          ← built-in default (fallback)
 ```
 
-写入一律到 `{dataDir}/` 下。
+All writes go under `{dataDir}/`.
 
-## 安装脚本 `scripts/install.sh`
+## Install Script `scripts/install.sh`
 
 ```bash
 #!/bin/bash
-# 初始化 ~/.cloe 数据目录
+# Initialize the ~/.cloe data directory
 CLOE_HOME="${1:-$HOME/.cloe}"
 mkdir -p "$CLOE_HOME"/{gifs,references,audio}
 
-# 从项目的 public/ 复制默认文件
+# Copy default files from the project's public/
 SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cp -n "$SCRIPT_DIR/public/gifs/"*.gif "$CLOE_HOME/gifs/"
 cp -n "$SCRIPT_DIR/public/audio/"*.mp3 "$CLOE_HOME/audio/"
 cp -n "$SCRIPT_DIR/public/references/"*.png "$CLOE_HOME/references/"
 cp -n "$SCRIPT_DIR/public/action-sets.json" "$CLOE_HOME/action-sets.json"
 
-# 生成默认 config.json（如果不存在）
+# Generate a default config.json (if it doesn't exist)
 if [ ! -f "$CLOE_HOME/config.json" ]; then
   cat > "$CLOE_HOME/config.json" << 'EOF'
 {"version":1,"dataDir":"~/.cloe","language":"zh-CN"}
 EOF
 fi
 
-echo "✓ Cloe 数据目录初始化完成: $CLOE_HOME"
+echo "✓ Cloe data directory initialized: $CLOE_HOME"
 ```
 
-## renderer 加载 GIF 的方式
+## How the Renderer Loads GIFs
 
-不再需要 HTTP 静态文件服务。通过 preload.js 暴露 dataDir 路径：
+No HTTP static file server is needed anymore. The dataDir path is exposed via preload.js:
 
 ```js
 // preload.js
@@ -98,29 +98,29 @@ const BASE = (location.protocol === 'file:' && DATA_DIR)
   : '/';
 ```
 
-这样 renderer 直接用 `file://` 加载本地文件，不需要 HTTP 中转。
+This way, the renderer loads local files directly via `file://`, with no HTTP relay needed.
 
-## Hermes Skill 交互
+## Hermes Skill Interaction
 
-Hermes skill（如 cloe-moment、cloe-video、新增动作）：
+Hermes skills (such as cloe-moment, cloe-video, adding new actions):
 
-1. 读 `~/.cloe/config.json` 获取 `dataDir`
-2. 写 GIF 到 `{dataDir}/gifs/xxx.gif`
-3. 更新 `{dataDir}/action-sets.json` 的 animations
-4. `curl http://localhost:19851/action -d '{"action":"xxx"}'` 触发播放
+1. Read `~/.cloe/config.json` to get `dataDir`
+2. Write the GIF to `{dataDir}/gifs/xxx.gif`
+3. Update the animations in `{dataDir}/action-sets.json`
+4. Trigger playback with `curl http://localhost:19851/action -d '{"action":"xxx"}'`
 
-## 迁移计划
+## Migration Plan
 
-从当前 userData 路径迁移到 `~/.cloe/`：
+Migrating from the current userData path to `~/.cloe/`:
 
-1. App 首次启动检测：如果 `~/.cloe/` 不存在但有旧数据，自动迁移
-2. 旧路径 `~/Library/Application Support/cloe-desktop/` → 新路径 `~/.cloe/`
-3. 迁移后旧数据保留不删除（安全）
+1. On first launch, the app detects: if `~/.cloe/` doesn't exist but old data does, migrate automatically
+2. Old path `~/Library/Application Support/cloe-desktop/` → new path `~/.cloe/`
+3. Old data is kept, not deleted, after migration (safe)
 
-## 好处
+## Benefits
 
-- **跨平台**：`~/.cloe/` 在 Linux/macOS/Windows 都能用
-- **Hermes 友好**：固定路径，skill 不用猜
-- **用户可配**：想放哪放哪
-- **简洁**：砍掉 HTTP 静态文件服务，去掉 `getPublicAssetsRoot`/`getWritableAssetsRoot` 等多个路径函数
-- **asar 只读 bundle**：asar 只放初始数据，运行时全部用 `~/.cloe/`
+- **Cross-platform**: `~/.cloe/` works on Linux/macOS/Windows
+- **Hermes-friendly**: a fixed path means the skill doesn't have to guess
+- **User-configurable**: put it wherever you want
+- **Simpler**: cuts the HTTP static file server, removes path functions like `getPublicAssetsRoot`/`getWritableAssetsRoot`
+- **asar is a read-only bundle**: asar only holds the initial data; at runtime everything uses `~/.cloe/`

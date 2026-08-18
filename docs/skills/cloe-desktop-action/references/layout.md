@@ -1,70 +1,70 @@
-# 角色布局控制（位置 + 大小）
+# Character Layout Control (Position + Size)
 
-控制角色在桌面窗口中的位置和缩放。这不是表情动作，而是角色的空间布局。
+Controls the character's position and scale within the desktop window. This isn't an expression/action -- it's the character's spatial layout.
 
 ## API
 
-### 获取布局
+### Get Layout
 
 ```bash
 curl -s http://localhost:19851/character-layout
-# 返回: {"position":{"x":0.5,"y":1},"size":{"scale":1}}
+# Returns: {"position":{"x":0.5,"y":1},"size":{"scale":1}}
 ```
 
-### 设置布局
+### Set Layout
 
 ```bash
-# 同时设置位置和大小
+# Set position and size together
 curl -s -X POST http://localhost:19851/character-layout \
   -H 'Content-Type: application/json' \
   -d '{"position":{"x":0.5,"y":1},"size":{"scale":1.2}}'
 
-# 只调整位置（往右挪）
+# Adjust position only (move right)
 curl -s -X POST http://localhost:19851/character-layout \
   -H 'Content-Type: application/json' \
   -d '{"position":{"x":0.7,"y":1}}'
 
-# 只调整大小
+# Adjust size only
 curl -s -X POST http://localhost:19851/character-layout \
   -H 'Content-Type: application/json' \
   -d '{"size":{"scale":1.5}}'
 ```
 
-## 参数说明
+## Parameters
 
-### position（位置）
+### position
 
-- `x`: 水平位置，0 = 最左，0.5 = 居中，1 = 最右
-- `y`: 垂直位置，0 = 最上，1 = 最下（默认底部）
-- 通过 CSS translate 实现，不是 object-position
+- `x`: horizontal position, 0 = leftmost, 0.5 = centered, 1 = rightmost
+- `y`: vertical position, 0 = topmost, 1 = bottommost (default)
+- Implemented via CSS translate, not object-position
 
-### size（缩放）
+### size (scale)
 
-- `scale`: 缩放因子，范围 0.2 ~ 3.0，默认 1.0
-- 通过 CSS transform scale 实现
+- `scale`: scale factor, range 0.2 ~ 3.0, default 1.0
+- Implemented via CSS transform scale
 
-## 实时同步
+## Real-time Sync
 
-- 设置后主窗口即时响应（IPC 广播 `character-position-updated` / `character-size-updated`）
-- 窗口 resize 时自动重新计算 translate 偏移
-- 偏好设置界面的 D-pad 和滑块也走同一个 API
+- The main window responds instantly after being set (IPC broadcasts `character-position-updated` / `character-size-updated`)
+- The translate offset is automatically recalculated on window resize
+- The D-pad and slider in the preferences UI use the same API
 
-## 使用场景
+## Use Cases
 
-- 可可自己挪位置："往右边来点" → POST position x+0.1
-- 可可调整大小：配合特定场景放大/缩小自己
-- 偏好设置手动调整：D-pad 方向键 + 缩放滑块
+- The character moving itself: "move a bit to the right" -> POST position x+0.1
+- The character resizing itself: enlarge/shrink for a particular scene
+- Manual adjustment in preferences: D-pad direction keys + scale slider
 
-## 默认值
+## Defaults
 
 ```json
 {"position":{"x":0.5,"y":1},"size":{"scale":1}}
 ```
 
-居中、底部、原始大小。
+Centered, at the bottom, original size.
 
-## 注意事项
+## Notes
 
-- position 用的是 0~1 的比例值，不是像素，窗口大小变化不影响相对位置
-- scale 有 0.2 ~ 3.0 的硬限制（launcher.js 端 clamp）
-- POST 是合并更新：只传 position 不影响 size，反之亦然
+- `position` uses ratio values from 0 to 1, not pixels, so relative position is unaffected by window size changes
+- `scale` has a hard limit of 0.2 ~ 3.0 (clamped on the launcher.js side)
+- POST is a merge update: passing only `position` doesn't affect `size`, and vice versa

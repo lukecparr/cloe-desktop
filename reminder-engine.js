@@ -137,28 +137,28 @@ function triggerReminder(reminder) {
  */
 function getReminderTTSMessage(r) {
   const WORK_MESSAGES = [
-    () => `${r.name}时间到啦`,
-    () => `${r.name}时间到了哦`,
-    () => `${r.name}的时间到了`,
-    () => `${r.name}该动一下了`,
-    () => `${r.name}到时间啦`,
-    () => `${r.name}该起来啦`,
+    () => `Time for ${r.name}`,
+    () => `It's ${r.name} time`,
+    () => `${r.name} time has arrived`,
+    () => `Time to get moving with ${r.name}`,
+    () => `${r.name} time is up`,
+    () => `Time to get up for ${r.name}`,
   ];
   const BREAK_MESSAGES = [
-    '休息时间到啦，放松一下吧',
-    '休息时间到了，歇会儿吧',
-    '可以休息啦，别太累了',
-    '该休息了，放松放松',
-    '到休息时间啦，活动活动',
-    '休息一下吧，你辛苦了',
+    'Break time, relax for a bit',
+    "It's break time, take a breather",
+    "You can rest now, don't overdo it",
+    'Time to rest, relax a little',
+    'Break time, stretch your legs',
+    "Take a break, you've earned it",
   ];
   const DONE_MESSAGES = [
-    () => `${r.name}全部完成啦，辛苦了`,
-    () => `${r.name}全做完啦，真棒`,
-    () => `${r.name}搞定啦，辛苦啦`,
-    () => `${r.name}全部搞定，收工吧`,
-    () => `${r.name}完成啦，你太厉害了`,
-    () => `${r.name}全部完成，休息一下吧`,
+    () => `All done with ${r.name}, great work`,
+    () => `${r.name} all finished, awesome`,
+    () => `${r.name} wrapped up, nice work`,
+    () => `${r.name} all wrapped up, time to call it a day`,
+    () => `${r.name} complete, you're amazing`,
+    () => `${r.name} all done, take a break`,
   ];
 
   if (r.mode === 'countdown' && r.phase === 'break') {

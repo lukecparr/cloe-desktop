@@ -114,7 +114,7 @@ function renderPluginRules() {
     const action = entry.action || '';
     return `
       <div class="pr-kw-row" data-idx="${i}">
-        <input type="text" class="form-input form-input-sm pr-kw-input" value="${escHtml(keywords)}" placeholder="关键词，逗号分隔" id="pr-kw-${i}">
+        <input type="text" class="form-input form-input-sm pr-kw-input" value="${escHtml(keywords)}" placeholder="${I18n.t('pluginRules.keywordPlaceholder')}" id="pr-kw-${i}">
         ${actionSelect(action, `pr-kw-action-${i}`, false)}
         <button class="btn-icon btn-icon-sm pr-kw-del" data-idx="${i}" title="Remove">✕</button>
       </div>`;

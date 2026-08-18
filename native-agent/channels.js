@@ -1,18 +1,18 @@
 'use strict';
 
 /**
- * Native Agent Channels — 消息平台适配器
+ * Native Agent Channels — messaging platform adapters
  *
- * 支持的 channel:
- *   - feishu (飞书) — 通过 Open API 发送消息
- *   - desktop (本地) — 通过 Cloe Desktop chat 窗口
+ * Supported channels:
+ *   - feishu (Feishu) — sends messages via the Open API
+ *   - desktop (local) — via the Cloe Desktop chat window
  *
- * Channel 接口:
- *   send(message) — 发送消息到 channel
- *   onMessage(cb) — 监听 incoming 消息
+ * Channel interface:
+ *   send(message) — send a message to the channel
+ *   onMessage(cb) — listen for incoming messages
  *
- * 每条 incoming 消息触发 agent.run()，
- * agent 的回复通过 channel.send() 发回去。
+ * Each incoming message triggers agent.run(),
+ * and the agent's reply is sent back via channel.send().
  */
 
 const http = require('http');

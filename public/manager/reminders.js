@@ -375,10 +375,10 @@ function formatNextTime(triggerAtIso) {
     const diffMs = target - now;
     if (diffMs <= 0) return '';
     const diffMin = Math.round(diffMs / 60000);
-    if (diffMin < 1) return '即将提醒';
-    if (diffMin < 60) return `${diffMin}分钟后`;
-    const targetStr = target.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
-    return `${targetStr}提醒`;
+    if (diffMin < 1) return 'Reminder due soon';
+    if (diffMin < 60) return `In ${diffMin} min`;
+    const targetStr = target.toLocaleTimeString(I18n?.getLocale?.() || undefined, { hour: '2-digit', minute: '2-digit' });
+    return `Reminder at ${targetStr}`;
   } catch {
     return '';
   }

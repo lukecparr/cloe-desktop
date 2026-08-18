@@ -1,24 +1,24 @@
 'use strict';
 
 /**
- * Native Agent Tools — 内置工具定义
+ * Native Agent Tools — built-in tool definitions
  *
- * 工具列表:
- *   terminal     — 执行 shell 命令
- *   file_read    — 读取文件
- *   file_write   — 写入文件
- *   file_search  — 搜索文件内容 (grep)
- *   web_search   — 网页搜索 (多 provider: zhipu_mcp / tavily / ddg / bing / serpapi)
- *   web_read     — 读取网页内容
- *   load_skill   — 加载 skill 全文
- *   memory_op    — 记忆操作 (add/remove/search)
- *   cloe_action  — 触发桌面动作 (smile/blink/kiss...)
- *   cloe_tts     — 文字转语音
+ * Tool list:
+ *   terminal     — execute a shell command
+ *   file_read    — read a file
+ *   file_write   — write a file
+ *   file_search  — search file contents (grep)
+ *   web_search   — web search (multi-provider: zhipu_mcp / tavily / ddg / bing / serpapi)
+ *   web_read     — read web page content
+ *   load_skill   — load a skill's full text
+ *   memory_op    — memory operations (add/remove/search)
+ *   cloe_action  — trigger a desktop action (smile/blink/kiss...)
+ *   cloe_tts     — text-to-speech
  *
- * 工具定义格式兼容 OpenAI function calling:
+ * Tool definition format is compatible with OpenAI function calling:
  * { name, description, parameters, execute }
  *
- * execute 返回 string (会被包进 tool result message)。
+ * execute returns a string (wrapped into the tool result message).
  */
 
 const { execFile, exec } = require('child_process');
@@ -609,9 +609,9 @@ async function executeTool(name, args, options = {}) {
   }
 }
 
-// ── Pi AgentTool 适配层 ──
-// 把现有工具包装成 pi-agent-core 的 AgentTool 格式(TypeBox schema + execute)。
-// 工具执行逻辑复用上面的 executeTool(),只改外层包装。
+// ── Pi AgentTool adapter layer ──
+// Wraps the existing tools into pi-agent-core's AgentTool format (TypeBox schema + execute).
+// Tool execution logic reuses executeTool() above — only the outer wrapper differs.
 
 let _Type = null;
 async function getType() {
@@ -621,7 +621,7 @@ async function getType() {
   return _Type;
 }
 
-// 工具的元信息(name/description/label/schema 定义),buildPiTools 和 buildToolDefinitions 共用
+// Tool metadata (name/description/label/schema definitions), shared by buildPiTools and buildToolDefinitions
 const TOOL_META = {
   terminal: {
     label: 'Terminal',

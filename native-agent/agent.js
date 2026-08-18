@@ -1,33 +1,37 @@
 'use strict';
 
 /**
- * Native Agent — 基于 Pi (pi-agent-core) 的 Agent Loop
+ * Native Agent — Agent loop built on Pi (pi-agent-core)
  *
- * 用 Pi 框架的 Agent 类替代原来手写的 SSE 解析 + 工具循环。
- * Pi 提供成熟的 streaming / tool-calling / abort / state / retry 能力。
+ * Uses Pi framework's Agent class instead of the original hand-rolled SSE
+ * parsing + tool loop. Pi provides mature streaming / tool-calling / abort /
+ * state / retry capabilities.
  *
- * 对外保持原有接口不变(native-proxy.js / channels.js 无需改动):
+ * Keeps the original external interface unchanged (no changes needed in
+ * native-proxy.js / channels.js):
  *   new AgentSession(sessionId, { history })
  *   session.addUserMessage(text)
  *   session.run({ onDelta, onTool, onError, onEnd }, signal)
  *   session.abort()
  *   session.reset()
  *
- * 事件映射:
+ * Event mapping:
  *   Pi message_update(text_delta)   → onDelta(text)
  *   Pi tool_execution_start         → onTool({ tool, emoji, label })
  *   Pi agent_end                    → onEnd(fullText, toolCalls)
- *   Pi 错误                          → onError(message)
+ *   Pi error                        → onError(message)
  *
- * Session 持久化:
- *   AgentSession 在构造时可接收 history (来自 cloe-sessions 持久化存储)。
- *   这些历史消息会在 Pi Agent 构造时注入到 state.messages，
- *   让 LLM 拥有完整的上下文。
+ * Session persistence:
+ *   AgentSession can receive history at construction time (from cloe-sessions'
+ *   persistent storage). These historical messages are injected into
+ *   state.messages when the Pi Agent is constructed, giving the LLM full context.
  *
- * 上下文管理:
- *   - 加载历史时: 如果消息过多(超过 contextWindow 的 60%)，自动截断旧消息
- *   - 运行时: 通过 transformContext hook 在每次 LLM 调用前检查并截断
- *   - 截断策略: 保留最近的消息，丢弃最早的，不做摘要(快速、无额外 API 调用)
+ * Context management:
+ *   - On history load: if there are too many messages (over 60% of contextWindow),
+ *     automatically truncate the oldest ones
+ *   - At runtime: the transformContext hook checks and truncates before each LLM call
+ *   - Truncation strategy: keep the most recent messages, drop the oldest, no
+ *     summarization (fast, no extra API calls)
  */
 
 const config = require('./config');
@@ -36,16 +40,16 @@ const memory = require('./memory');
 const skills = require('./skills');
 const { buildPiTools, getToolEmoji, formatToolLabel } = require('./tools');
 
-// ── 上下文管理常量 ──
-// 保守估算: ~4 chars ≈ 1 token (中英混合)
+// ── Context management constants ──
+// Conservative estimate: ~4 chars ≈ 1 token (mixed CJK/English)
 const CHARS_PER_TOKEN = 4;
-// 默认 context window（如果 model 定义里没有）
+// Default context window (if not present in the model definition)
 const DEFAULT_CONTEXT_WINDOW = 128000;
-// 安全阈值: 当估算 token 数超过 contextWindow 的此比例时触发截断
+// Safety threshold: truncate once estimated tokens exceed this fraction of contextWindow
 const CONTEXT_THRESHOLD = 0.6;
-// 最少保留的消息轮数（截断时的下限）
+// Minimum number of message turns to keep (floor when truncating)
 const MIN_KEEP_TURNS = 6;
-// 估算单条消息的 token 数
+// Estimate token count for a single message
 function estimateMessageTokens(msg) {
   if (!msg?.content) return 0;
   if (typeof msg.content === 'string') return Math.ceil(msg.content.length / CHARS_PER_TOKEN);
@@ -53,7 +57,7 @@ function estimateMessageTokens(msg) {
     let chars = 0;
     for (const part of msg.content) {
       if (part?.text) chars += part.text.length;
-      if (part?.type === 'image') chars += 4800; // 图片估算
+      if (part?.type === 'image') chars += 4800; // image estimate
     }
     return Math.ceil(chars / CHARS_PER_TOKEN);
   }
@@ -118,7 +122,7 @@ function truncateToFit(messages, maxTokens) {
   return { messages: result, dropped, droppedTokens };
 }
 
-// ── Pi 模块懒加载缓存 ──
+// ── Pi module lazy-load cache ──
 let _piCache = null;
 
 async function loadPi() {
@@ -135,7 +139,7 @@ function preloadPi() {
   loadPi().catch(e => console.error('[NativeAgent] preload failed:', e.message));
 }
 
-// ── Provider / Model 构造 ──
+// ── Provider / Model construction ──
 // Per-provider compat hints for reasoning/thinking to work correctly.
 // Keyed by the config provider name (zhipu / deepseek / openai / custom / ...).
 // These mirror the compat fields in pi-ai's built-in model definitions.

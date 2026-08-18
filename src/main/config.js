@@ -250,8 +250,9 @@ function getInitialMainWindowXY(windowWidth, windowHeight) {
   const saved = loadWindowPosition();
   if (!saved) return fallback;
 
-  // 宽松检查：允许窗口部分超出屏幕边缘（macOS 正常行为）
-  // 只排除极端异常值（超过屏幕尺寸2倍）
+  // Lenient check: allow the window to extend partly past the screen edge
+  // (normal macOS behavior). Only reject extreme outliers (more than 2x the
+  // screen size).
   const maxReasonable = Math.max(sw, sh) * 2;
   if (Math.abs(saved.x) > maxReasonable || Math.abs(saved.y) > maxReasonable) {
     return fallback;

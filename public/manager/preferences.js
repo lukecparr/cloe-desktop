@@ -139,10 +139,10 @@ function renderPreferences() {
           </div>
           <div class="pref-control">
             <div style="display:flex;align-items:center;gap:10px;min-width:200px;">
-              <button type="button" class="btn btn-secondary btn-sm" id="pref-char-scale-down" title="缩小">−</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="pref-char-scale-down" title="Zoom out">−</button>
               <input type="range" id="pref-char-scale" min="0.2" max="3.0" step="0.05" value="1.0"
                 style="flex:1;accent-color:var(--accent);cursor:pointer;">
-              <button type="button" class="btn btn-secondary btn-sm" id="pref-char-scale-up" title="放大">+</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="pref-char-scale-up" title="Zoom in">+</button>
               <span id="pref-char-scale-value" style="font-size:13px;font-weight:600;min-width:42px;text-align:right;color:var(--text);">1.00×</span>
             </div>
           </div>

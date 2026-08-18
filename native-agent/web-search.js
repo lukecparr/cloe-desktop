@@ -1,20 +1,20 @@
 'use strict';
 
 /**
- * Web Search Engine — 多 Provider 搜索架构
+ * Web Search Engine — multi-provider search architecture
  *
- * 支持的 Provider:
- *   1. zhipu_mcp  — 智谱 MCP Streamable HTTP (web_search_prime + web_reader)
- *   2. tavily     — Tavily Search API (国外，效果好)
- *   3. ddg        — DuckDuckGo HTML (免费兜底，无需 API Key)
+ * Supported providers:
+ *   1. zhipu_mcp  — Zhipu MCP Streamable HTTP (web_search_prime + web_reader)
+ *   2. tavily     — Tavily Search API (international, good results)
+ *   3. ddg        — DuckDuckGo HTML (free fallback, no API key needed)
  *   4. bing       — Bing Search API (Azure)
- *   5. serpapi    — SerpAPI (Google 代理)
+ *   5. serpapi    — SerpAPI (Google proxy)
  *
- * 所有 Provider 统一返回格式:
+ * All providers return a unified format:
  *   search() → [{ title, url, snippet }]
  *   read()   → { title, content (markdown) }
  *
- * 配置在 ~/.cloe/native-agent.json → webSearch 段。
+ * Configured in ~/.cloe/native-agent.json → the webSearch section.
  */
 
 const http = require('http');
@@ -55,15 +55,15 @@ function httpRequest(method, url, { headers = {}, body = null, timeoutMs = 15000
   });
 }
 
-// ── 获取 webSearch 配置 ──
+// ── Get webSearch config ──
 function getWebSearchConfig() {
   const cfg = config.loadConfig();
   return cfg.webSearch || { provider: 'zhipu_mcp', providers: {} };
 }
 
-// ── 提取 SSE event data ──
+// ── Extract SSE event data ──
 function parseSSE(rawText) {
-  // SSE 格式: id:1\nevent:message\ndata:{...}\n\n
+  // SSE format: id:1\nevent:message\ndata:{...}\n\n
   const lines = rawText.split('\n');
   let dataLine = '';
   for (const line of lines) {
@@ -72,14 +72,14 @@ function parseSSE(rawText) {
     }
   }
   if (!dataLine) {
-    // 可能不是 SSE，尝试直接 JSON parse
+    // Might not be SSE — try parsing as plain JSON
     try { return JSON.parse(rawText); } catch { return null; }
   }
   try { return JSON.parse(dataLine); } catch { return null; }
 }
 
 // ══════════════════════════════════════════════
-// Provider 1: 智谱 MCP (web_search_prime + web_reader)
+// Provider 1: Zhipu MCP (web_search_prime + web_reader)
 // ══════════════════════════════════════════════
 
 const zhipuMcp = {
@@ -278,7 +278,7 @@ const tavily = {
 };
 
 // ══════════════════════════════════════════════
-// Provider 3: DuckDuckGo HTML (免费，无需 API Key)
+// Provider 3: DuckDuckGo HTML (free, no API key needed)
 // ══════════════════════════════════════════════
 
 const ddg = {
@@ -366,7 +366,7 @@ const bing = {
 };
 
 // ══════════════════════════════════════════════
-// Provider 5: SerpAPI (Google 代理)
+// Provider 5: SerpAPI (Google proxy)
 // ══════════════════════════════════════════════
 
 const serpapi = {
@@ -403,19 +403,19 @@ const serpapi = {
 // ══════════════════════════════════════════════
 
 const PROVIDERS = {
-  zhipu_mcp: { name: '智谱 MCP (推荐)', ...zhipuMcp },
+  zhipu_mcp: { name: 'Zhipu MCP (recommended)', ...zhipuMcp },
   tavily:    { name: 'Tavily', ...tavily },
-  ddg:       { name: 'DuckDuckGo (免费)', ...ddg },
+  ddg:       { name: 'DuckDuckGo (free)', ...ddg },
   bing:      { name: 'Bing API', ...bing },
   serpapi:   { name: 'SerpAPI (Google)', ...serpapi },
 };
 
 const PROVIDER_META = {
-  zhipu_mcp: { label: '智谱 MCP', needsApiKey: true, apiKeyLabel: '智谱 API Key', extra: {} },
+  zhipu_mcp: { label: 'Zhipu MCP', needsApiKey: true, apiKeyLabel: 'Zhipu API Key', extra: {} },
   tavily:    { label: 'Tavily', needsApiKey: true, apiKeyLabel: 'Tavily API Key', extra: {} },
   ddg:       { label: 'DuckDuckGo', needsApiKey: false, apiKeyLabel: '', extra: {} },
   bing:      { label: 'Bing API', needsApiKey: true, apiKeyLabel: 'Bing Subscription Key', extra: { endpoint: 'Bing Endpoint' } },
-  serpapi:   { label: 'SerpAPI', needsApiKey: true, apiKeyLabel: 'SerpAPI Key', extra: { engine: '搜索引擎 (google/bing/baidu)' } },
+  serpapi:   { label: 'SerpAPI', needsApiKey: true, apiKeyLabel: 'SerpAPI Key', extra: { engine: 'Search engine (google/bing/baidu)' } },
 };
 
 // ══════════════════════════════════════════════

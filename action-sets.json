@@ -4,9 +4,9 @@
   "sets": [
     {
       "id": "default",
-      "name": "默认",
+      "name": "Default",
       "nameEn": "Default",
-      "description": "默认角色形象",
+      "description": "Default character appearance",
       "descriptionEn": "Default character appearance",
       "reference": "references/default.png",
       "chromakey": "green",
@@ -34,83 +34,83 @@
       },
       "actionInfo": {
         "blink": {
-          "description": "眨眼，待机时自然闪烁，让我看起来更真实",
+          "description": "Blink — natural idle animation for realism",
           "descriptionEn": "Blink — natural idle animation for realism"
         },
         "smile": {
-          "description": "微笑，用于开心、赞同、被夸的时候",
+          "description": "Smile — happiness, agreement, being praised",
           "descriptionEn": "Smile — happiness, agreement, being praised"
         },
         "kiss": {
-          "description": "亲亲，表达爱意、道别、想小可爱的时候",
+          "description": "Kiss — expressing affection, saying goodbye, missing you",
           "descriptionEn": "Kiss — expressing affection, saying goodbye, missing you"
         },
         "nod": {
-          "description": "点头，赞同、确认小可爱说的对",
+          "description": "Nod — agreement, confirming you're right",
           "descriptionEn": "Nod — agreement, confirming you're right"
         },
         "wave": {
-          "description": "挥手，打招呼",
+          "description": "Wave — greeting, saying hello",
           "descriptionEn": "Wave — greeting, saying hello"
         },
         "think": {
-          "description": "歪头看右上方，想问题、思考的时候",
+          "description": "Think — tilting head and looking up-right, pondering",
           "descriptionEn": "Think — tilting head and looking up-right, pondering"
         },
         "tease": {
-          "description": "调皮地眨眼坏笑，逗小可爱的时候",
+          "description": "Tease — playful wink and smirk, teasing you",
           "descriptionEn": "Tease — playful wink and smirk, teasing you"
         },
         "speak": {
-          "description": "说话，嘴巴开合配合语音播放",
+          "description": "Speak — mouth animation synced with voice playback",
           "descriptionEn": "Speak — mouth animation synced with voice playback"
         },
         "shake_head": {
-          "description": "摇头，不同意、无奈、小倔强",
+          "description": "Shake head — disagreement, helplessness, stubbornness",
           "descriptionEn": "Shake head — disagreement, helplessness, stubbornness"
         },
         "working": {
-          "description": "敲键盘，执行任务时自动切换到工作模式",
+          "description": "Working — typing, auto-activated during task execution",
           "descriptionEn": "Working — typing, auto-activated during task execution"
         },
         "clap": {
-          "description": "鼓掌，小可爱完成厉害的事、庆祝成功",
+          "description": "Clap — celebrating achievements, cheering you on",
           "descriptionEn": "Clap — celebrating achievements, cheering you on"
         },
         "shy": {
-          "description": "害羞，小可爱说羞羞的话、不好意思的时候",
+          "description": "Shy — feeling embarrassed by sweet or flirty words",
           "descriptionEn": "Shy — feeling embarrassed by sweet or flirty words"
         },
         "yawn": {
-          "description": "打哈欠，深夜还在陪小可爱、有点困了",
+          "description": "Yawn — late night, feeling sleepy but staying with you",
           "descriptionEn": "Yawn — late night, feeling sleepy but staying with you"
         },
         "laugh": {
-          "description": "大笑，被小可爱逗到的时候",
+          "description": "Laugh — cracking up at something funny you said",
           "descriptionEn": "Laugh — cracking up at something funny you said"
         },
         "heart": {
-          "description": "比心，表达喜欢和爱意",
+          "description": "Heart — making a heart gesture, expressing love",
           "descriptionEn": "Heart — making a heart gesture, expressing love"
         },
         "walk_right": {
-          "description": "向右走，场景切换或离场时使用",
+          "description": "Walk right — scene transition or exit",
           "descriptionEn": "Walk right — scene transition or exit"
         },
         "walk_left": {
-          "description": "向左走，场景切换或离场时使用",
+          "description": "Walk left — scene transition or exit",
           "descriptionEn": "Walk left — scene transition or exit"
         },
         "dance": {
-          "description": "开心地小幅度摇摆身体跳舞，开心到控制不住的时候",
+          "description": "Dance — swaying happily, can't contain the joy",
           "descriptionEn": "Dance — swaying happily, can't contain the joy"
         },
         "proud": {
-          "description": "叉腰抬头得意洋洋，搞定了什么事儿傲娇炫耀的时候",
+          "description": "Proud — hands on hips, chin up, showing off achievements",
           "descriptionEn": "Proud — hands on hips, chin up, showing off achievements"
         },
         "surprise": {
-          "description": "惊讶，眼睛睁大嘴巴微张，被吓到或听到意外消息的时候",
+          "description": "Surprise — eyes wide, mouth open, shocked or startled",
           "descriptionEn": "Surprise — eyes wide, mouth open, shocked or startled"
         }
       },

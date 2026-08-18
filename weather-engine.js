@@ -1,7 +1,7 @@
 /**
  * Cloe Desktop — Weather Engine
  *
- * Fetches weather data from Open-Meteo (free, no key) or QWeather (和风天气).
+ * Fetches weather data from Open-Meteo (free, no key) or QWeather (a Chinese weather provider).
  * Polls every 30 min, broadcasts weather updates via WebSocket.
  *
  * Used by: launcher.js
@@ -284,10 +284,10 @@ async function fetchQWeather(lat, lon, apiKey) {
 
 function describeWeather(type, code) {
   const map = {
-    clear: '晴', cloudy: '多云', rain: '雨', snow: '雪',
-    fog: '雾', thunderstorm: '雷雨', sandstorm: '沙尘暴', icy: '结冰',
+    clear: 'Clear', cloudy: 'Cloudy', rain: 'Rain', snow: 'Snow',
+    fog: 'Fog', thunderstorm: 'Thunderstorm', sandstorm: 'Sandstorm', icy: 'Icy',
   };
-  return map[type] || '晴';
+  return map[type] || 'Clear';
 }
 
 // ==================== Core Fetch Cycle ====================
@@ -424,18 +424,18 @@ function handleWeatherRoute(req, res) {
 
         // Build base weather from type
         const baseTemplates = {
-          rain: { weatherCode: 61, weatherType: 'rain', text: '预览-雨', temp: isNight ? 18 : 20, rain: 5, precipitation: 5, cloudCover: 80, visibility: 5000, windSpeed: 10, windDir: 90, humidity: 85 },
-          snow: { weatherCode: 71, weatherType: 'snow', text: '预览-雪', temp: isNight ? -5 : -3, snowfall: 3, precipitation: 3, cloudCover: 90, visibility: 3000, windSpeed: 5, windDir: 0, humidity: 75 },
-          fog: { weatherCode: 45, weatherType: 'fog', text: '预览-雾', temp: 10, cloudCover: 100, visibility: 500, windSpeed: 2, windDir: 0, humidity: 95 },
-          thunderstorm: { weatherCode: 95, weatherType: 'thunderstorm', text: '预览-雷暴', temp: 22, rain: 15, precipitation: 15, cloudCover: 95, visibility: 2000, windSpeed: 20, windDir: 180, humidity: 90 },
-          clear: { weatherCode: 0, weatherType: 'clear', text: '晴', temp: isNight ? 20 : 25, cloudCover: 5, visibility: 20000, windSpeed: isNight ? 2 : 3, windDir: 45, humidity: isNight ? 50 : 40 },
-          cloudy: { weatherCode: 3, weatherType: 'cloudy', text: '多云', temp: isNight ? 15 : 18, cloudCover: 75, visibility: 12000, windSpeed: isNight ? 5 : 8, windDir: 90, humidity: 60 },
-          icy: { weatherCode: 77, weatherType: 'icy', text: '预览-结冰', temp: -8, snowfall: 0, precipitation: 0, cloudCover: 60, visibility: 8000, windSpeed: 6, windDir: 0, humidity: 85 },
+          rain: { weatherCode: 61, weatherType: 'rain', text: 'Preview - Rain', temp: isNight ? 18 : 20, rain: 5, precipitation: 5, cloudCover: 80, visibility: 5000, windSpeed: 10, windDir: 90, humidity: 85 },
+          snow: { weatherCode: 71, weatherType: 'snow', text: 'Preview - Snow', temp: isNight ? -5 : -3, snowfall: 3, precipitation: 3, cloudCover: 90, visibility: 3000, windSpeed: 5, windDir: 0, humidity: 75 },
+          fog: { weatherCode: 45, weatherType: 'fog', text: 'Preview - Fog', temp: 10, cloudCover: 100, visibility: 500, windSpeed: 2, windDir: 0, humidity: 95 },
+          thunderstorm: { weatherCode: 95, weatherType: 'thunderstorm', text: 'Preview - Thunderstorm', temp: 22, rain: 15, precipitation: 15, cloudCover: 95, visibility: 2000, windSpeed: 20, windDir: 180, humidity: 90 },
+          clear: { weatherCode: 0, weatherType: 'clear', text: 'Clear', temp: isNight ? 20 : 25, cloudCover: 5, visibility: 20000, windSpeed: isNight ? 2 : 3, windDir: 45, humidity: isNight ? 50 : 40 },
+          cloudy: { weatherCode: 3, weatherType: 'cloudy', text: 'Cloudy', temp: isNight ? 15 : 18, cloudCover: 75, visibility: 12000, windSpeed: isNight ? 5 : 8, windDir: 90, humidity: 60 },
+          icy: { weatherCode: 77, weatherType: 'icy', text: 'Preview - Icy', temp: -8, snowfall: 0, precipitation: 0, cloudCover: 60, visibility: 8000, windSpeed: 6, windDir: 0, humidity: 85 },
         };
 
         const base = baseTemplates[wt] || baseTemplates.rain;
         const previewHour = data.previewHour !== undefined ? data.previewHour : null;
-        const w = { provider: 'preview', city: '预览', feelsLike: base.temp, windGusts: base.windSpeed * 2, showers: 0, snowfall: base.snowfall || 0, ...base, isDay: !isNight };
+        const w = { provider: 'preview', city: 'Preview', feelsLike: base.temp, windGusts: base.windSpeed * 2, showers: 0, snowfall: base.snowfall || 0, ...base, isDay: !isNight };
         if (previewHour !== null) w.previewHour = previewHour;
         cachedWeather = w;
         broadcast({ type: 'weather-update', weather: w });
@@ -501,21 +501,21 @@ function handleWeatherRoute(req, res) {
         const data = JSON.parse(body || '{}');
         const wt = data.weatherType || 'rain';
         const templates = {
-          rain: { weatherCode: 61, weatherType: 'rain', text: '测试-雨', temp: 20, rain: 5, precipitation: 5, cloudCover: 80, visibility: 5000, windSpeed: 10, windDir: 90, humidity: 85, isDay: true },
-          snow: { weatherCode: 71, weatherType: 'snow', text: '测试-雪', temp: -3, snowfall: 3, precipitation: 3, cloudCover: 90, visibility: 3000, windSpeed: 5, windDir: 0, humidity: 75, isDay: true },
-          fog: { weatherCode: 45, weatherType: 'fog', text: '测试-雾', temp: 10, cloudCover: 100, visibility: 500, windSpeed: 2, windDir: 0, humidity: 95, isDay: true },
-          thunderstorm: { weatherCode: 95, weatherType: 'thunderstorm', text: '测试-雷暴', temp: 22, rain: 15, precipitation: 15, cloudCover: 95, visibility: 2000, windSpeed: 20, windDir: 180, humidity: 90, isDay: true },
-          clear: { weatherCode: 0, weatherType: 'clear', text: '晴', temp: 25, cloudCover: 5, visibility: 20000, windSpeed: 3, windDir: 45, humidity: 40, isDay: true },
-          cloudy: { weatherCode: 3, weatherType: 'cloudy', text: '多云', temp: 18, cloudCover: 75, visibility: 12000, windSpeed: 8, windDir: 90, humidity: 60, isDay: true },
-          icy: { weatherCode: 77, weatherType: 'icy', text: '测试-结冰', temp: -8, snowfall: 0, precipitation: 0, cloudCover: 60, visibility: 8000, windSpeed: 6, windDir: 0, humidity: 85, isDay: true },
+          rain: { weatherCode: 61, weatherType: 'rain', text: 'Test - Rain', temp: 20, rain: 5, precipitation: 5, cloudCover: 80, visibility: 5000, windSpeed: 10, windDir: 90, humidity: 85, isDay: true },
+          snow: { weatherCode: 71, weatherType: 'snow', text: 'Test - Snow', temp: -3, snowfall: 3, precipitation: 3, cloudCover: 90, visibility: 3000, windSpeed: 5, windDir: 0, humidity: 75, isDay: true },
+          fog: { weatherCode: 45, weatherType: 'fog', text: 'Test - Fog', temp: 10, cloudCover: 100, visibility: 500, windSpeed: 2, windDir: 0, humidity: 95, isDay: true },
+          thunderstorm: { weatherCode: 95, weatherType: 'thunderstorm', text: 'Test - Thunderstorm', temp: 22, rain: 15, precipitation: 15, cloudCover: 95, visibility: 2000, windSpeed: 20, windDir: 180, humidity: 90, isDay: true },
+          clear: { weatherCode: 0, weatherType: 'clear', text: 'Clear', temp: 25, cloudCover: 5, visibility: 20000, windSpeed: 3, windDir: 45, humidity: 40, isDay: true },
+          cloudy: { weatherCode: 3, weatherType: 'cloudy', text: 'Cloudy', temp: 18, cloudCover: 75, visibility: 12000, windSpeed: 8, windDir: 90, humidity: 60, isDay: true },
+          icy: { weatherCode: 77, weatherType: 'icy', text: 'Test - Icy', temp: -8, snowfall: 0, precipitation: 0, cloudCover: 60, visibility: 8000, windSpeed: 6, windDir: 0, humidity: 85, isDay: true },
           // Night variants
-          'clear-night': { weatherCode: 0, weatherType: 'clear', text: '晴(夜)', temp: 20, cloudCover: 5, visibility: 20000, windSpeed: 2, windDir: 0, humidity: 50, isDay: false },
-          'cloudy-night': { weatherCode: 3, weatherType: 'cloudy', text: '多云(夜)', temp: 15, cloudCover: 75, visibility: 12000, windSpeed: 5, windDir: 90, humidity: 60, isDay: false },
-          'rain-night': { weatherCode: 61, weatherType: 'rain', text: '雨(夜)', temp: 18, rain: 5, precipitation: 5, cloudCover: 85, visibility: 5000, windSpeed: 10, windDir: 90, humidity: 85, isDay: false },
-          'snow-night': { weatherCode: 71, weatherType: 'snow', text: '雪(夜)', temp: -3, snowfall: 3, precipitation: 3, cloudCover: 90, visibility: 3000, windSpeed: 5, windDir: 0, humidity: 75, isDay: false },
+          'clear-night': { weatherCode: 0, weatherType: 'clear', text: 'Clear (Night)', temp: 20, cloudCover: 5, visibility: 20000, windSpeed: 2, windDir: 0, humidity: 50, isDay: false },
+          'cloudy-night': { weatherCode: 3, weatherType: 'cloudy', text: 'Cloudy (Night)', temp: 15, cloudCover: 75, visibility: 12000, windSpeed: 5, windDir: 90, humidity: 60, isDay: false },
+          'rain-night': { weatherCode: 61, weatherType: 'rain', text: 'Rain (Night)', temp: 18, rain: 5, precipitation: 5, cloudCover: 85, visibility: 5000, windSpeed: 10, windDir: 90, humidity: 85, isDay: false },
+          'snow-night': { weatherCode: 71, weatherType: 'snow', text: 'Snow (Night)', temp: -3, snowfall: 3, precipitation: 3, cloudCover: 90, visibility: 3000, windSpeed: 5, windDir: 0, humidity: 75, isDay: false },
         };
         const fake = templates[wt] || templates.rain;
-        const w = { provider: 'inject', city: '测试', feelsLike: fake.temp, windGusts: fake.windSpeed * 2, showers: 0, snowfall: fake.snowfall || 0, ...fake };
+        const w = { provider: 'inject', city: 'Test', feelsLike: fake.temp, windGusts: fake.windSpeed * 2, showers: 0, snowfall: fake.snowfall || 0, ...fake };
         cachedWeather = w;
         broadcast({ type: 'weather-update', weather: w });
         console.log(`[Weather] Injected: ${wt}`);

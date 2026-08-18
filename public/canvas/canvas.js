@@ -5,8 +5,9 @@
  * Supports: annotation, text, arrow, highlight, rect, image, emoji.
  * All new elements animate in with a fade-in effect.
  *
- * Elements are authored by "可可" (Cloe) with distinct visual styling
- * (accent color, avatar indicator, rounded corners).
+ * Elements authored by "可可" (Cloe's Chinese name, used as the author
+ * value) get distinct visual styling (accent color, avatar indicator,
+ * rounded corners).
  */
 
 (function () {

@@ -1,24 +1,24 @@
 'use strict';
 
 /**
- * Native Agent Memory — 分层记忆 + 衰减遗忘 (v2)
+ * Native Agent Memory — tiered memory + decay-based forgetting (v2)
  *
- * 存储在 ~/.cloe/native-agent-memory.json
+ * Stored in ~/.cloe/native-agent-memory.json
  *
- * 分类策略:
- *   user_pref  — 用户偏好/个人信息(永不淘汰,上限 100 条,全量注入)
- *   project    — 项目相关知识(LRU 衰减,上限 100 条)
- *   tool       — 工具使用经验(LRU 衰减,上限 80 条)
- *   general    — 一般知识(LRU 衰减,上限 50 条)
+ * Category strategy:
+ *   user_pref  — user preferences/personal info (never evicted, cap 100 entries, injected in full)
+ *   project    — project-related knowledge (LRU decay, cap 100 entries)
+ *   tool       — tool usage experience (LRU decay, cap 80 entries)
+ *   general    — general knowledge (LRU decay, cap 50 entries)
  *
- * Trust 动态衰减:
- *   - 新记忆初始 trust = 0.5
- *   - 每次 render() 注入时 trust += 0.02(使用即强化)
- *   - 每次 search() 命中时 trust += 0.1
- *   - 每天按时间衰减,trust < 0.05 且非 user_pref → 自动淘汰
+ * Dynamic trust decay:
+ *   - New memories start at trust = 0.5
+ *   - Each render() injection: trust += 0.02 (reinforced by use)
+ *   - Each search() hit: trust += 0.1
+ *   - Decays daily over time; trust < 0.05 and not user_pref → auto-evicted
  *
- * 注入策略(预算 6000 字符):
- *   user_pref 全注入 → tool 按 trust 降序 → project 按 trust 降序 → general 按 trust 降序
+ * Injection strategy (6000-char budget):
+ *   user_pref injected in full → tool by trust desc → project by trust desc → general by trust desc
  */
 
 const fs = require('fs');
@@ -26,9 +26,9 @@ const crypto = require('crypto');
 const { CONFIG_DIR, MEMORY_FILE } = require('./paths');
 
 const SCHEMA_VERSION = 2;
-const MAX_MEMORY_CHARS = 6000;   // 注入 system prompt 的最大字符数
+const MAX_MEMORY_CHARS = 6000;   // max characters injected into the system prompt
 
-// 每个分类的上限
+// Cap per category
 const CATEGORY_LIMITS = {
   user_pref: 100,
   project: 100,
@@ -37,19 +37,19 @@ const CATEGORY_LIMITS = {
 };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const DECAY_PER_DAY = 0.01;     // 每天衰减量
-const MIN_TRUST = 0.1;          // trust 下限
-const EVICT_THRESHOLD = 0.05;   // 低于此值且非 user_pref → 淘汰
-const RENDER_BOOST = 0.02;      // render 命中时强化
-const SEARCH_BOOST = 0.1;       // search 命中时强化
-const DIRTY_THRESHOLD = 0.05;   // trust 变化超过此值才写入
-const FLUSH_INTERVAL = 30000;   // 脏数据延迟写入间隔(30秒)
+const DECAY_PER_DAY = 0.01;     // decay amount per day
+const MIN_TRUST = 0.1;          // trust floor
+const EVICT_THRESHOLD = 0.05;   // below this and not user_pref → evicted
+const RENDER_BOOST = 0.02;      // reinforcement on render hit
+const SEARCH_BOOST = 0.1;       // reinforcement on search hit
+const DIRTY_THRESHOLD = 0.05;   // only write once trust change exceeds this
+const FLUSH_INTERVAL = 30000;   // delayed write interval for dirty data (30s)
 
 let store = null;         // { version, entries, last_decay }
-let dirty = false;        // 是否有未写入的变更
+let dirty = false;        // whether there are unwritten changes
 let flushTimer = null;
 
-// ── 加载 / 迁移 / 保存 ──
+// ── Load / migrate / save ──
 
 function loadStore() {
   if (store) return store;
@@ -129,7 +129,7 @@ function saveMemory() {
   }
 }
 
-// ── Trust 衰减 ──
+// ── Trust decay ──
 
 /**
  * Apply time-based trust decay + eviction.
@@ -145,7 +145,7 @@ function applyDecay() {
   const decay = days * DECAY_PER_DAY;
 
   store.entries = store.entries.filter(e => {
-    if (e.category === 'user_pref') return true;  // 永不淘汰
+    if (e.category === 'user_pref') return true;  // never evicted
     e.trust = Math.max(MIN_TRUST, e.trust - decay);
     return e.trust >= EVICT_THRESHOLD;
   });
@@ -153,14 +153,14 @@ function applyDecay() {
   markDirty();
 }
 
-// ── 分类上限管理 ──
+// ── Per-category cap enforcement ──
 
 function enforceCategoryLimit(entries, category) {
   const limit = CATEGORY_LIMITS[category] || 50;
   const inCat = entries.filter(e => e.category === category);
   if (inCat.length <= limit) return;
 
-  // 淘汰 trust 最低且最久未使用的
+  // Evict the entries with the lowest trust and longest since last used
   inCat.sort((a, b) =>
     (b.trust * (b.last_used || 1)) - (a.trust * (a.last_used || 1))
   );
@@ -168,7 +168,7 @@ function enforceCategoryLimit(entries, category) {
   return entries.filter(e => !toRemove.has(e.id));
 }
 
-// ── Tags 工具 ──
+// ── Tags helper ──
 
 function parseTags(tags) {
   if (Array.isArray(tags)) return tags.filter(Boolean);
@@ -178,7 +178,7 @@ function parseTags(tags) {
   return [];
 }
 
-// ── 公共 API ──
+// ── Public API ──
 
 /**
  * Add a memory entry.

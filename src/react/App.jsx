@@ -22,7 +22,7 @@ const API_BASE = 'http://127.0.0.1:19851';
 
 function MuteToast({ toast }) {
   if (!toast) return null;
-  const text = toast.muted ? '已静音' : '已恢复语音';
+  const text = toast.muted ? 'Muted' : 'Unmuted';
   return (
     <div style={toastStyle}>
       {toast.muted ? (
@@ -46,8 +46,8 @@ function MuteToast({ toast }) {
 function PauseToast({ toast }) {
   if (!toast) return null;
   const text = toast.paused
-    ? `已暂停 ${toast.count} 个提醒`
-    : `已恢复 ${toast.count} 个提醒`;
+    ? `Paused ${toast.count} reminder(s)`
+    : `Resumed ${toast.count} reminder(s)`;
   return (
     <div style={toastStyle}>
       {toast.paused ? (
@@ -89,7 +89,7 @@ const toastAckBtnStyle = {
 function SessionToast({ toast, onAcknowledge }) {
   if (!toast) return null;
   const isDecision = toast.status === 'needs_decision';
-  const text = isDecision ? `${toast.name} · 待确认` : `${toast.name} · 已就绪`;
+  const text = isDecision ? `${toast.name} · Waiting` : `${toast.name} · Ready`;
   const color = isDecision ? '#f5a623' : '#3dd68c';
   return (
     <div style={toastStyle}>
@@ -108,7 +108,7 @@ function SessionToast({ toast, onAcknowledge }) {
       <button
         style={toastAckBtnStyle}
         onClick={() => onAcknowledge(toast.id)}
-        title="知道了"
+        title="Dismiss"
         onMouseEnter={e => { e.currentTarget.style.background = `${color}1f`; e.currentTarget.style.color = color; }}
         onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.3)'; }}
       >

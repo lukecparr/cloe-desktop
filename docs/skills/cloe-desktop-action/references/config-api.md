@@ -1,20 +1,20 @@
-# 配置 API
+# Config API
 
-通过 Bridge API 读写应用配置、窗口位置/缩放、以及 plugin 触发规则。配置持久化在 `~/.cloe/config.json`。
+Read and write app config, window position/scale, and plugin trigger rules through the Bridge API. Config is persisted in `~/.cloe/config.json`.
 
-> 角色在窗口内的位置和大小用 `/character-layout`，详见 [layout.md](layout.md)。
+> The character's position and size within the window use `/character-layout` -- see [layout.md](layout.md) for details.
 
-## 一、应用配置（api-config）
+## 1. App Config (api-config)
 
-`/api-config` 读写整个 `~/.cloe/config.json`。POST 是**浅合并**（patch），不会覆盖未传的字段。
+`/api-config` reads/writes the entire `~/.cloe/config.json`. POST does a **shallow merge** (patch) -- it won't overwrite fields that weren't passed.
 
-### 读取全部配置
+### Read Full Config
 
 ```bash
 curl -s http://localhost:19851/api-config
 ```
 
-返回完整的 config.json，常见字段包括：
+Returns the full config.json; common fields include:
 
 ```json
 {
@@ -33,91 +33,91 @@ curl -s http://localhost:19851/api-config
 }
 ```
 
-### 更新配置（合并）
+### Update Config (merge)
 
 ```bash
-# 设置 DashScope API key（GIF 生成用）
+# Set the DashScope API key (used for GIF generation)
 curl -s -X POST http://localhost:19851/api-config -H 'Content-Type: application/json' \
   -d '{"dashscopeApiKey":"sk-xxx"}'
 
-# 配置 Hermes API
+# Configure the Hermes API
 curl -s -X POST http://localhost:19851/api-config -H 'Content-Type: application/json' \
   -d '{"hermesApi":{"host":"127.0.0.1","port":8642,"key":"your-key"}}'
 
-# 改语言
+# Change the language
 curl -s -X POST http://localhost:19851/api-config -H 'Content-Type: application/json' \
   -d '{"language":"en-US"}'
 ```
 
-> 浅合并：传 `{"hermesApi":{...}}` 会**整体替换** hermesApi 对象（不会深合并）。要改 hermesApi 的某个字段，需把整个 hermesApi 对象传全。
+> Shallow merge: passing `{"hermesApi":{...}}` **replaces the entire** hermesApi object (no deep merge). To change a single field of hermesApi, you need to pass the whole hermesApi object.
 
-## 二、窗口位置
+## 2. Window Position
 
-主悬浮窗的位置记忆。坐标是屏幕绝对像素。
+Remembers the position of the main floating window. Coordinates are absolute screen pixels.
 
-### 读取（含当前实际位置）
+### Read (including the current actual position)
 
 ```bash
 curl -s http://localhost:19851/window-position
 # {"saved": {"x": 100, "y": 200}, "current": {"x": 105, "y": 210}}
 ```
 
-- `saved`：持久化保存的位置
-- `current`：窗口当前实际位置（可能因用户拖动而与 saved 不同）
+- `saved`: the persisted, saved position
+- `current`: the window's actual current position (may differ from `saved` if the user dragged it)
 
-### 保存 / 清除
+### Save / Clear
 
 ```bash
-# 保存当前位置
+# Save the current position
 curl -s -X POST http://localhost:19851/window-position -H 'Content-Type: application/json' \
   -d '{"x":100,"y":200}'
 
-# 清除保存的位置（下次启动用默认位置）
+# Clear the saved position (uses the default position next launch)
 curl -s -X POST http://localhost:19851/window-position -H 'Content-Type: application/json' \
   -d '{"clear":true}'
 ```
 
-## 三、窗口缩放
+## 3. Window Scale
 
-整个主窗口的缩放比例（影响 GIF 显示尺寸）。范围 `0.3 ~ 2.0`，默认 `1.0`。
+The scale factor of the entire main window (affects the GIF display size). Range `0.3 ~ 2.0`, default `1.0`.
 
-### 读取
+### Read
 
 ```bash
 curl -s http://localhost:19851/window-scale
 # {"scale": 1.0, "min": 0.3, "max": 2.0}
 ```
 
-### 设置
+### Set
 
 ```bash
 curl -s -X POST http://localhost:19851/window-scale -H 'Content-Type: application/json' \
   -d '{"scale":1.5}'
 ```
 
-超出 `[0.3, 2.0]` 范围会被自动钳制到边界。
+Values outside `[0.3, 2.0]` are automatically clamped to the boundary.
 
-## 四、Plugin 触发规则
+## 4. Plugin Trigger Rules
 
-`plugin-rules.json` 定义 Hermes plugin 的自动触发规则（什么条件下自动让角色做某个动作）。详见 [plugin.md](plugin.md)。
+`plugin-rules.json` defines the auto-trigger rules for the Hermes plugin (under what conditions the character automatically performs an action). See [plugin.md](plugin.md) for details.
 
-### 读取
+### Read
 
 ```bash
 curl -s http://localhost:19851/plugin-rules
 ```
 
-### 写入
+### Write
 
 ```bash
 curl -s -X POST http://localhost:19851/plugin-rules -H 'Content-Type: application/json' \
   -d '{"rules":[...]}'
 ```
 
-整个替换（非合并）。文件位于 `<dataDir>/plugin-rules.json`。
+Replaces the whole thing (not a merge). The file lives at `<dataDir>/plugin-rules.json`.
 
-## 注意事项
+## Notes
 
-- 所有配置改动都是即时生效并落盘的，应用重启后保留
-- `dataDir` 字段决定数据根目录（GIF/音频/config 都在这下面），默认 `~/.cloe`
-- 改 `hermesApi`、`dashscopeApiKey` 等敏感字段后，相关的功能（chat、GIF 生成）会立即用新值
+- All config changes take effect immediately and are persisted, surviving an app restart
+- The `dataDir` field determines the data root directory (GIFs/audio/config all live under it), default `~/.cloe`
+- After changing sensitive fields like `hermesApi` or `dashscopeApiKey`, related features (chat, GIF generation) immediately use the new values

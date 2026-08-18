@@ -1,75 +1,75 @@
 ---
 name: cloe-android
-description: Cloe Android 原生悬浮窗 App — Kotlin + WebSocket + GIF 动画，通过 Tailscale 跨网络连接 PC bridge。
+description: Cloe Android native floating-window app — Kotlin + WebSocket + GIF animation, connects to the PC bridge across networks via Tailscale.
 ---
 
-# Cloe Android — 悬浮窗客户端
+# Cloe Android — Floating Window Client
 
-## 项目位置
+## Project Location
 
 `~/work/cloe-android/`
-GitHub: `https://github.com/JakimLi/cloe-android`（独立私有仓库，已从 cloe-desktop issue #5 拆出）
+GitHub: `https://github.com/JakimLi/cloe-android` (independent private repo, split out from cloe-desktop issue #5)
 
-## 技术栈
+## Tech Stack
 
 - **Kotlin** + Android SDK 35 (minSdk 26)
-- **Glide** — GIF 播放
-- **Java-WebSocket** — WS 客户端连 PC bridge
-- **Kotlin Coroutines** — idle 循环 + 断线重连
-- **Tailscale** — 跨网络组网（PC bridge 100.91.131.48）
+- **Glide** — GIF playback
+- **Java-WebSocket** — WS client connecting to the PC bridge
+- **Kotlin Coroutines** — idle loop + reconnect on disconnect
+- **Tailscale** — cross-network setup (PC bridge 100.91.131.48)
 
-## 核心架构
+## Core Architecture
 
 ```
-PC (Hermes/Bridge, Tailscale IP) ←──WS──→ Android App (悬浮窗)
+PC (Hermes/Bridge, Tailscale IP) ←──WS──→ Android App (floating window)
   bridge: :19850 WS + :19851 HTTP          CloeService: Foreground Service
-  launcher.js: 0.0.0.0 监听                悬浮窗: SYSTEM_ALERT_WINDOW
-                                            GIF: APK assets 本地加载
+  launcher.js: listens on 0.0.0.0          Floating window: SYSTEM_ALERT_WINDOW
+                                            GIF: loaded locally from APK assets
 ```
 
-## 构建
+## Build
 
 ```bash
 cd ~/work/cloe-android && ./gradlew assembleDebug --no-daemon
 # APK: app/build/outputs/apk/debug/app-debug.apk (~29MB)
 ```
 
-## 踩坑记录
+## Lessons Learned
 
-### ⚠️ GIF 缓存不会随APK更新刷新
+### ⚠️ The GIF cache doesn't refresh when the APK updates
 
-CloeService 的 `copyAssetToFile()` 在 `cacheDir` 缓存 GIF，逻辑是 `if (cacheFile.exists()) return`。升级 APK 后旧缓存仍在，新 GIF 不会生效。
+CloeService's `copyAssetToFile()` caches GIFs in `cacheDir`, with logic of `if (cacheFile.exists()) return`. After upgrading the APK, the old cache is still there, so new GIFs don't take effect.
 
-**解决方案**：用户必须**卸载重装**或**清除应用数据**（设置→应用→Cloe→存储→清除数据）。
+**Workaround**: the user must **uninstall and reinstall** or **clear app data** (Settings → Apps → Cloe → Storage → Clear Data).
 
-**根本修复**：在缓存文件名中嵌入 `BuildConfig.VERSION_CODE`，或用 `versionCode` 子目录隔离缓存，每次升级自动刷新。
+**Real fix**: embed `BuildConfig.VERSION_CODE` in the cache filename, or isolate the cache in a `versionCode` subdirectory, so it refreshes automatically on every upgrade.
 
-### Gradle Wrapper 生成
+### Generating the Gradle Wrapper
 
-**问题**: 从 GitHub raw 下载的 gradle-wrapper.jar 无主清单属性，无法直接运行。
+**Problem**: gradle-wrapper.jar downloaded from GitHub raw has no main manifest attribute and can't run directly.
 
-**解决**: 必须用完整 Gradle 发行版生成 wrapper。
+**Solution**: you must use a full Gradle distribution to generate the wrapper.
 ```bash
-# 从腾讯镜像下载 Gradle（官方源国内太慢）
+# Download Gradle from a Tencent mirror (the official source is too slow domestically)
 curl -L -o /tmp/gradle-8.11.1-bin.zip "https://mirrors.cloud.tencent.com/gradle/gradle-8.11.1-bin.zip"
 unzip -q /tmp/gradle-8.11.1-bin.zip -d /tmp
-# 在空目录生成 wrapper
+# Generate the wrapper in an empty directory
 cd /tmp && mkdir gw-gen && cd gw-gen && touch settings.gradle
 /tmp/gradle-8.11.1/bin/gradle wrapper --gradle-version 8.11.1 --no-daemon
-# 拷贝到项目
+# Copy into the project
 cp gradlew ~/work/cloe-android/
 cp -r gradle/ ~/work/cloe-android/
 ```
 
-**Wrapper properties 用腾讯镜像**:
+**Use the Tencent mirror for wrapper properties**:
 ```properties
 distributionUrl=https\://mirrors.cloud.tencent.com/gradle/gradle-8.11.1-bin.zip
 validateDistributionUrl=false
 ```
 
-### 国内 Maven 镜像
+### Domestic Maven Mirrors
 
-`settings.gradle.kts` 阿里云镜像优先：
+`settings.gradle.kts` prioritizes Alibaba Cloud mirrors:
 ```kotlin
 maven { url = uri("https://maven.aliyun.com/repository/google") }
 maven { url = uri("https://maven.aliyun.com/repository/central") }
@@ -78,36 +78,36 @@ google()
 mavenCentral()
 ```
 
-### 必需配置文件
+### Required Config Files
 
-1. **`gradle.properties`**: `android.useAndroidX=true` — 否则 Glide 等 AndroidX 依赖报错
+1. **`gradle.properties`**: `android.useAndroidX=true` — otherwise AndroidX dependencies like Glide throw errors
 2. **`local.properties`**: `sdk.dir=/Users/lijian/Library/Android/sdk`
-3. **`app/build.gradle.kts`**: 必须在文件顶部声明 `plugins { id("com.android.application"); id("org.jetbrains.kotlin.android") }`，不能只在 root 声明 `apply false`
+3. **`app/build.gradle.kts`**: must declare `plugins { id("com.android.application"); id("org.jetbrains.kotlin.android") }` at the top of the file — it's not enough to declare `apply false` only in root
 
-### Kotlin 编译常见错误
+### Common Kotlin Compile Errors
 
-- `Unresolved reference 'Intent'` → 缺 `import android.content.Intent`
-- `Unresolved reference 'File'` → 缺 `import java.io.File`
-- `'onBind' overrides nothing` → 缺 `import android.os.IBinder`
-- 用 `JsonReader` 别写 `android.util.JsonReader`，直接 `import android.util.JsonReader`（已内置）
+- `Unresolved reference 'Intent'` → missing `import android.content.Intent`
+- `Unresolved reference 'File'` → missing `import java.io.File`
+- `'onBind' overrides nothing` → missing `import android.os.IBinder`
+- When using `JsonReader`, don't write `android.util.JsonReader` — just `import android.util.JsonReader` (already built in)
 
-### Bridge 改 0.0.0.0
+### Bridge Changed to 0.0.0.0
 
-`~/work/cloe-desktop/launcher.js` 中 WS server 和 HTTP server 的 host 从 `127.0.0.1` 改为 `0.0.0.0`，否则 Tailscale 虚拟网卡无法访问。Probe 检测（`waitForBridge`）保持 `127.0.0.1` 不变。
+In `~/work/cloe-desktop/launcher.js`, the host for the WS server and HTTP server was changed from `127.0.0.1` to `0.0.0.0` — otherwise the Tailscale virtual network interface can't reach it. Probe detection (`waitForBridge`) stays on `127.0.0.1`.
 
-### ⚠️ Idle 循环会打断 Hermes 主动发的 reaction 动作
+### ⚠️ The idle loop interrupts reaction actions actively sent by Hermes
 
-**问题**：`playAction()` 有 `if (action == lastAction) return` 逻辑——如果 idle 恰好随机播了 kiss，紧接着 Hermes/curl 主动发 kiss，安卓端直接跳过。即使不重复，reaction 3秒后就恢复 idle，GIF 还没播完就被覆盖。
+**Problem**: `playAction()` has `if (action == lastAction) return` logic — if idle happens to randomly play kiss, and Hermes/curl immediately sends kiss actively afterward, the Android side just skips it. Even without a repeat, the reaction reverts to idle after 3 seconds, so the GIF gets overwritten before it finishes playing.
 
-**修复（2026-05-04 已提交）**：给 `playAction` 加 `isReaction` 参数：
-- `isReaction=true`（默认）：Hermes/curl 触发的动作，**强制播放不跳过**，cooldown 4秒
-- `isReaction=false`：idle 自动脉发，重复的仍跳过，cooldown 3秒
-- `scheduleNextIdle()` 中 idle 播完后手动 cancel+delay+再调度，不再直接递归调用
+**Fix (committed 2026-05-04)**: added an `isReaction` parameter to `playAction`:
+- `isReaction=true` (default): actions triggered by Hermes/curl, **forced to play, never skipped**, 4-second cooldown
+- `isReaction=false`: idle auto-triggered pulses, repeats still skipped, 3-second cooldown
+- In `scheduleNextIdle()`, after idle finishes playing, manually cancel + delay + reschedule, instead of recursing directly
 
 ```kotlin
 private fun playAction(action: String, isReaction: Boolean = true) {
     if (!pathByAction.containsKey(action)) return
-    if (action == lastAction && !isReaction) return  // idle 去重，reaction 不去重
+    if (action == lastAction && !isReaction) return  // dedupe for idle, not for reaction
     lastAction = action
     loadGif(action)
     if (action != "working") {
@@ -120,209 +120,209 @@ private fun playAction(action: String, isReaction: Boolean = true) {
 }
 ```
 
-### GIF 资源策略
+### GIF Asset Strategy
 
-**打包进 APK assets**（推荐）而非网络拉取：
-- 每个 GIF ~2.5-2.9MB，10 个共 27MB
-- `copyAssetToFile()` 在 `onCreate` 时拷贝到 `cacheDir`，Glide 通过 `file://` 加载
-- 优点：秒开、断网仍可用、不占网络
-- APK 总大小 ~29MB（含 GIF + 依赖）
-- **新动作通过"从 PC 拉取"同步，无需重新打包**（除非想内置到 assets）
+**Bundled into APK assets** (recommended) rather than fetched over the network:
+- Each GIF is ~2.5-2.9MB, 10 of them total 27MB
+- `copyAssetToFile()` copies to `cacheDir` in `onCreate`, and Glide loads via `file://`
+- Advantages: instant open, works offline, uses no network
+- Total APK size ~29MB (including GIFs + dependencies)
+- **New actions sync via "pull from PC"**, no repackaging needed (unless you want to bake them into assets)
 
-### Tailscale 启动（Intel Mac, brew 安装）
+### Starting Tailscale (Intel Mac, brew install)
 
-⚠️ **必须用 brew 版 userspace-networking，不能用 Tailscale 桌面版！**
-Tailscale 桌面版（内核态 tun）在 macOS 上与 Node.js 不兼容：TCP 端口通但 HTTP/WS 请求会被 RST，安卓连上也是假连接。brew 版走用户态网络栈没有这个问题。
+⚠️ **Must use the brew userspace-networking version, not the Tailscale desktop app!**
+The Tailscale desktop app (kernel-mode tun) is incompatible with Node.js on macOS: TCP ports connect fine but HTTP/WS requests get RST'd, so the Android connection is fake even when it looks connected. The brew version, running a userspace network stack, doesn't have this problem.
 
-如果误装了桌面版，先停掉：
+If you accidentally installed the desktop version, stop it first:
 ```bash
 sudo tailscale down
 sudo launchctl unload /Library/LaunchDaemons/io.tailscale.ipn.macsys.tailscaled.plist
 ```
 
-然后启动 brew 版：
+Then start the brew version:
 ```bash
-# brew 安装的 tailscaled 不走 launchd，手动启动
+# The brew-installed tailscaled doesn't run under launchd, start it manually
 tailscaled --tun=userspace-networking --socket=/tmp/tailscaled.sock --state=/tmp/tailscaled.state &
 TAILSCALE_USE_WIP_STATE=1 tailscale --socket=/tmp/tailscaled.sock up
-# 授权 URL 会输出到终端，手机浏览器打开登录即可
+# The auth URL will print to the terminal — open it on your phone's browser to log in
 # IP: tailscale --socket=/tmp/tailscaled.sock ip -4
 ```
 
-Tailscale 是 split tunnel，只路由 `100.x.x.x` 网段，不影响其他流量。
+Tailscale is a split tunnel — it only routes the `100.x.x.x` subnet and doesn't affect other traffic.
 
-### 排查安卓连接假状态
+### Troubleshooting a Fake "Connected" State on Android
 
-安卓显示"已连接"但收不到事件时：
-1. `curl -s http://127.0.0.1:19851/status` 看 `clients` 数（Electron renderer 自占 1 个，安卓连上应 ≥2）
-2. `curl -s http://127.0.0.1:19851/action -d '{"action":"working"}'` 看 `sent_to` 数量
-3. 如果 clients=1 但安卓显示已连接 → IP 不对或 Tailscale 版本有问题
-4. 也可以从 Tailscale IP 测试：`curl -s http://100.91.131.48:19851/status`（brew 版应返回 JSON，桌面版会 empty reply）
+When Android shows "connected" but isn't receiving events:
+1. `curl -s http://127.0.0.1:19851/status` — check the `clients` count (the Electron renderer occupies 1 by itself, so Android connected should show ≥2)
+2. `curl -s http://127.0.0.1:19851/action -d '{"action":"working"}'` — check the `sent_to` count
+3. If clients=1 but Android shows connected → the IP is wrong or there's a Tailscale version issue
+4. You can also test from the Tailscale IP: `curl -s http://100.91.131.48:19851/status` (the brew version should return JSON, the desktop version returns an empty reply)
 
-## 文件结构
+## File Structure
 
 ```
 cloe-android/
 ├── app/src/main/
 │   ├── java/com/cloe/android/
-│   │   ├── MainActivity.kt          # 设置页：IP输入、权限申请、连接/断开
-│   │   └── CloeService.kt           # 核心：悬浮窗 + WS + GIF播放 + idle循环
+│   │   ├── MainActivity.kt          # Settings page: IP input, permission requests, connect/disconnect
+│   │   └── CloeService.kt           # Core: floating window + WS + GIF playback + idle loop
 │   ├── assets/
-|   │   ├── gifs/*.gif               # 13个动作GIF（从 cloe-desktop 复制）
-│   │   └── audio/*.mp3              # 语音文件
+|   │   ├── gifs/*.gif               # 13 action GIFs (copied from cloe-desktop)
+│   │   └── audio/*.mp3              # Voice files
 │   ├── res/
-│   │   ├── layout/activity_main.xml # 设置页UI
+│   │   ├── layout/activity_main.xml # Settings page UI
 │   │   └── values/styles.xml
 │   └── AndroidManifest.xml
 ├── gradle/wrapper/                  # gradle-wrapper.jar + properties
-├── local.properties                 # SDK 路径
+├── local.properties                 # SDK path
 ├── gradle.properties                # android.useAndroidX=true
-├── settings.gradle.kts              # 阿里云镜像
-├── build.gradle.kts                 # root: AGP + Kotlin 插件声明
-└── app/build.gradle.kts             # app: 依赖 + 编译配置
+├── settings.gradle.kts              # Alibaba Cloud mirror
+├── build.gradle.kts                 # root: AGP + Kotlin plugin declarations
+└── app/build.gradle.kts             # app: dependencies + build config
 ```
 
-## 动作映射（与 Electron 一致）
+## Action Mapping (matches Electron)
 
-| Action | GIF | 触发方式 |
+| Action | GIF | Trigger |
 |--------|-----|---------|
-| smile/kiss/nod/wave/think/tease/speak/shake_head/working/blink/clap/shy/yawn/laugh/pout/sigh | 同名.gif | WS action 消息 |
+| smile/kiss/nod/wave/think/tease/speak/shake_head/working/blink/clap/shy/yawn/laugh/pout/sigh | same-named .gif | WS action message |
 
-### Speak 动画 + 音频同步（Android）
+### Speak Animation + Audio Sync (Android)
 
-安卓端 speak 必须音画同步——**不能光张嘴没声音**。
+On Android, speak must be audio-visually synced — **the mouth can't move without sound**.
 
-**消息格式**：
+**Message format**:
 ```json
-{"action":"speak","audio":"doing"}           // 预录语音
-{"action":"speak","audio_url":"http://..."}   // TTS 语音
+{"action":"speak","audio":"doing"}           // pre-recorded voice
+{"action":"speak","audio_url":"http://..."}   // TTS voice
 ```
 
-**音频源 URL 规则**：
-- 预录和 TTS 统一走 `/tts/` 路由：`http://<host>:19851/tts/<name>.mp3`
-- Bridge serve `~/.cloe/audio_cache/`，预录文件（doing.mp3、done.mp3）需提前拷入该目录
-- **不要新建 `/audio/` 路由，复用 `/tts/` 即可**
+**Audio source URL rules**:
+- Both pre-recorded and TTS go through the unified `/tts/` route: `http://<host>:19851/tts/<name>.mp3`
+- The bridge serves `~/.cloe/audio_cache/` — pre-recorded files (doing.mp3, done.mp3) need to be copied into that directory ahead of time
+- **Don't create a new `/audio/` route, just reuse `/tts/`**
 
-**⚠️ 跨设备 URL 替换**：`audio_url` 中的 `localhost`/`127.0.0.1` 必须替换为 `host`（安卓连接时配置的 PC IP）。`audioName` 模式直接拼接 `host`。
+**⚠️ Cross-device URL substitution**: `localhost`/`127.0.0.1` in `audio_url` must be replaced with `host` (the PC IP configured when Android connects). In `audioName` mode, just concatenate `host` directly.
 
-**同步方案（v2 — 自然体验）**：
-1. 收到 speak → 播微笑 GIF 作为过渡（**不是 speak.gif！**），后台下载音频
-2. 音频下载+准备完成（`onPrepared`）→ **同时**切换到 speak.gif + 开始播放声音
-3. 音频播放期间 → `isSpeaking=true` 锁生效
-4. 播放完成 → 解锁，恢复 idle 循环
+**Sync approach (v2 — natural experience)**:
+1. On receiving speak → play the smile GIF as a transition (**not speak.gif!**), download the audio in the background
+2. Once the audio download+prep completes (`onPrepared`) → **simultaneously** switch to speak.gif + start playing the sound
+3. During audio playback → the `isSpeaking=true` lock is active
+4. On playback complete → unlock, resume the idle loop
 
-> ⚠️ **v1 方案（已废弃）**：立即播 speak.gif 等音频下载。问题：网络慢时光张嘴没声音，很尴尬。
+> ⚠️ **v1 approach (deprecated)**: play speak.gif immediately while waiting for the audio download. Problem: on a slow network, the mouth moves with no sound, which is awkward.
 
-**音频缓存（⚠️ 必须校验文件完整性）**：
-- 下载到 `cacheDir/audio/`，文件存在且 `length() > 0` 才跳过下载
-- **0 字节文件必须删除后重新下载**（之前 404 响应会留下空缓存，导致 MediaPlayer setDataSource 崩溃）
-- 下载前必须检查 HTTP responseCode == 200，非 200 直接抛异常
+**Audio caching (⚠️ file integrity must be verified)**:
+- Download to `cacheDir/audio/`, only skip the download if the file exists and `length() > 0`
+- **0-byte files must be deleted and re-downloaded** (a previous 404 response could leave behind an empty cache, causing MediaPlayer setDataSource to crash)
+- Must check HTTP responseCode == 200 before downloading; throw immediately on non-200
 
-**预录音频部署**：
-- 预录文件原始位置 `~/.cloe/audio/`，但 bridge 只 serve `~/.cloe/audio_cache/`
-- **必须手动拷贝**：`cp ~/.cloe/audio/*.mp3 ~/.cloe/audio_cache/`
-- 否则 404 → 安卓缓存 0 字节空文件 → 后续即使修复仍播不了
+**Pre-recorded audio deployment**:
+- Pre-recorded files originally live at `~/.cloe/audio/`, but the bridge only serves `~/.cloe/audio_cache/`
+- **Must copy manually**: `cp ~/.cloe/audio/*.mp3 ~/.cloe/audio_cache/`
+- Otherwise: 404 → Android caches a 0-byte empty file → playback still fails even after a later fix
 
-**状态保护**：
-- `isSpeaking` 锁：说话时 idle/wave/working 不打断，新主动动作会 `stopSpeaking()` 后再播
-- 下载失败/播放错误 → 自动恢复 idle，不卡死
+**State protection**:
+- `isSpeaking` lock: while speaking, idle/wave/working don't interrupt; a new proactive action will call `stopSpeaking()` first, then play
+- On download failure/playback error → automatically resume idle, never gets stuck
 - `onDestroy` → `releaseMediaPlayer()`
 
-**调试**：
+**Debugging**:
 ```bash
-# 检查 bridge 是否 serve 预录音频（统一走 /tts/）
+# Check whether the bridge serves the pre-recorded audio (unified through /tts/)
 curl -s -o /dev/null -w "%{http_code}" http://localhost:19851/tts/doing.mp3
-# 期望 200，如果是 404 说明预录文件没拷到 audio_cache
+# Expect 200; a 404 means the pre-recorded file wasn't copied to audio_cache
 
-# 查看安卓端缓存（排查空文件问题）
+# Inspect the Android-side cache (to debug empty-file issues)
 adb shell run-as com.cloe.android ls -la cache/audio/
 
-# 清除错误缓存
+# Clear a bad cache entry
 adb shell run-as com.cloe.android rm cache/audio/doing.mp3
 
-# 查看安卓端日志
+# View Android-side logs
 adb logcat -d | grep CloeService
-# 关注：Downloading audio / Audio downloaded / Audio playing / Audio error
+# Look for: Downloading audio / Audio downloaded / Audio playing / Audio error
 ```
 
-**⚠️ MediaPlayer 在 IO 线程下载、切 Main 线程播放**。`setDataSource` 必须用本地文件路径（`File.absolutePath`），不能直接用 URL。0字节文件会导致 setDataSource 崩溃（error message 为 null）。
+**⚠️ MediaPlayer downloads on an IO thread, plays on the Main thread**. `setDataSource` must use a local file path (`File.absolutePath`), not a URL directly. A 0-byte file will crash setDataSource (with a null error message).
 
-## 悬浮窗交互
+## Floating Window Interaction
 
-- **展开**: 显示 GIF 动画，点击或收 action → 缩回圆点
-- **缩回**: 粉色圆点 (50dp)，点击 → 展开
-- **拖动**: 展开和缩回状态都支持拖动
-- **idle 循环**: 8-15秒随机切换，working 模式下暂停
+- **Expanded**: shows the GIF animation, tap or receive an action → collapses to a dot
+- **Collapsed**: pink dot (50dp), tap → expands
+- **Drag**: both expanded and collapsed states support dragging
+- **idle loop**: random switch every 8-15 seconds, paused in working mode
 
-### ⚠️ Gravity.END 拖动方向反转
+### ⚠️ Gravity.END Reverses Drag Direction
 
-`WindowManager.LayoutParams` 使用 `Gravity.END` 时，`p.x` 是**距离右边缘**的偏移量，不是绝对坐标。所以拖动时 **dx 要取反**：
+When `WindowManager.LayoutParams` uses `Gravity.END`, `p.x` is the offset **from the right edge**, not an absolute coordinate. So **dx must be negated** when dragging:
 
 ```kotlin
-// Gravity.TOP | Gravity.END 时：水平拖动 dx 取反，垂直 dy 不变
+// With Gravity.TOP | Gravity.END: negate dx for horizontal dragging, dy stays as-is for vertical
 p.x -= dx; p.y += dy
 ```
 
-如果写成 `p.x += dx`，拖动方向会和手指相反。
+If written as `p.x += dx`, the drag direction will be reversed from the finger's movement.
 
-## 通过飞书发送 APK
+## Sending the APK via Feishu
 
-**⚠️ 飞书 `im/v1/files` file_type=stream 上传限制 30MB。** 14个GIF(200px/10fps)打包后约29MB，刚好在限制内。如果GIF是高清版(400px/10fps)则APK约40MB，需要先压缩GIF。
+**⚠️ Feishu's `im/v1/files` upload with file_type=stream is capped at 30MB.** 14 GIFs (200px/10fps) packaged together come to about 29MB, just under the limit. If the GIFs are the high-res version (400px/10fps), the APK comes to about 40MB, and the GIFs need to be compressed first.
 
-### APK超30MB时的GIF压缩方案
+### GIF Compression Approach When the APK Exceeds 30MB
 
-用ffmpeg大幅压缩（200px宽+8fps），14个GIF从37MB→10MB，APK从40MB→29MB：
+Heavily compress with ffmpeg (200px wide + 8fps), bringing 14 GIFs from 37MB down to 10MB, and the APK from 40MB down to 29MB:
 
 ```bash
-# 压缩所有GIF到临时目录
+# Compress all GIFs into a temp directory
 mkdir -p /tmp/gifs_tiny
 cd ~/work/cloe-android/app/src/main/assets/gifs/
 for f in *.gif; do
   ffmpeg -y -i "$f" -vf "fps=8,scale=200:-1:flags=lanczos" -loop 0 /tmp/gifs_tiny/"$f" 2>/dev/null
 done
 
-# 备份原图，替换为压缩版
-cp *.gif /tmp/gifs_original/   # 首次备份
+# Back up the originals, swap in the compressed versions
+cp *.gif /tmp/gifs_original/   # first-time backup
 cp /tmp/gifs_tiny/*.gif .
 
-# 重新打包
+# Repackage
 cd ~/work/cloe-android && ./gradlew assembleDebug --no-daemon
 
-# 打包完成后恢复高清原图（源码保留高清版）
+# After packaging, restore the high-res originals (keep the high-res versions in source)
 cp /tmp/gifs_original/*.gif ~/work/cloe-android/app/src/main/assets/gifs/
 ```
 
-## 通过飞书发送 APK
+## Sending the APK via Feishu
 
-**⚠️ 飞书文件上传限制30MB，14个GIF的APK约40MB会超限。**
+**⚠️ Feishu's file upload is capped at 30MB; an APK with 14 GIFs comes to about 40MB, which exceeds it.**
 
-**解决方案**：打包前用ffmpeg压缩GIF到200px/8fps（37MB→10MB），打包后恢复原图。
+**Solution**: compress the GIFs with ffmpeg to 200px/8fps before packaging (37MB→10MB), then restore the originals after packaging.
 
 ```bash
-# 1. 压缩GIF到临时目录
+# 1. Compress GIFs into a temp directory
 for f in app/src/main/assets/gifs/*.gif; do
   ffmpeg -y -i "$f" -vf "fps=8,scale=200:-1:flags=lanczos" -loop 0 /tmp/gifs_tiny/$(basename $f) 2>/dev/null
 done
 
-# 2. 备份原图，替换压缩版
+# 2. Back up the originals, swap in the compressed versions
 cp -r app/src/main/assets/gifs/ /tmp/gifs_original/
 cp /tmp/gifs_tiny/*.gif app/src/main/assets/gifs/
 
-# 3. 打包
+# 3. Package
 ./gradlew assembleDebug --no-daemon
 
-# 4. 恢复原图（压缩版只在APK里用）
+# 4. Restore the originals (compressed versions are only used inside the APK)
 cp /tmp/gifs_original/*.gif app/src/main/assets/gifs/
 ```
 
-## 通过飞书发送 APK
+## Sending the APK via Feishu
 
-**⚠️ 飞书 im/v1/files file_type=stream 限制30MB！** 原图APK（14个GIF）约43MB会超限。
+**⚠️ Feishu's `im/v1/files` file_type=stream is capped at 30MB!** The original-quality APK (14 GIFs) comes to about 43MB, which exceeds it.
 
-### 方案1：压缩GIF（⚠️ 必须保留透明度）
+### Option 1: Compress the GIFs (⚠️ must preserve transparency)
 
 ```bash
-# 正确方法：palettegen + paletteuse 保留 alpha 通道
+# Correct method: palettegen + paletteuse to preserve the alpha channel
 for f in public/gifs/*.gif; do
   name=$(basename "$f")
   ffmpeg -y -i "$f" -vf "fps=8,scale=200:-1:flags=lanczos,palettegen=stats_mode=diff" /tmp/pal.png
@@ -330,25 +330,25 @@ for f in public/gifs/*.gif; do
 done
 ```
 
-**❌ 错误方法（会丢失透明度，安卓显示白背景）：**
+**❌ Wrong method (loses transparency, shows a white background on Android):**
 ```bash
-ffmpeg -y -i input.gif -vf "fps=8,scale=200:-1" output.gif  # 没有 palette → 白背景！
+ffmpeg -y -i input.gif -vf "fps=8,scale=200:-1" output.gif  # no palette → white background!
 ```
 
-压缩后14个GIF从37MB降到17MB，APK约29MB，刚好在限制内。
+After compression, the 14 GIFs drop from 37MB to 17MB, and the APK comes to about 29MB, just under the limit.
 
-**⚠️ 压缩只用于打包APK，源码assets里保留原图。打包完记得恢复。**
+**⚠️ Compression is only for packaging the APK — keep the originals in the source assets. Remember to restore them after packaging.**
 
-### 方案2：其他传输方式
+### Option 2: Other Transfer Methods
 
-飞书云文档上传、AirDrop、ADB安装等。
+Feishu cloud docs upload, AirDrop, ADB install, etc.
 
-## Chroma Key 帧间闪烁修复
+## Chroma Key Frame-to-Frame Flicker Fix
 
-动作幅度大的GIF（如laugh大笑）chromakey抠图边缘帧间不一致，导致背景闪烁。
+GIFs with large motion (like laugh) have inconsistent chromakey edges between frames, causing background flicker.
 
-**修复方法**：用PIL逐帧处理半透明像素（alpha 30-150）中的绿色残留，做形态学dilation扩展前景边缘。
+**Fix**: use PIL to process semi-transparent pixels (alpha 30-150) frame by frame, removing residual green, and apply morphological dilation to expand the foreground edge.
 
-可委托Claude Code深度处理：`claude -p '修复laugh.gif chromakey闪烁' --effort max --allowedTools 'Read,Edit,Bash'`
+Can be delegated to Claude Code for deep processing: `claude -p 'fix laugh.gif chromakey flicker' --effort max --allowedTools 'Read,Edit,Bash'`
 
-**注意**：`file_type` 只支持 `stream/pdf/doc/xls/ppt`，不支持 `apk` 或 `octet-stream`。
+**Note**: `file_type` only supports `stream/pdf/doc/xls/ppt`, not `apk` or `octet-stream`.

@@ -1,27 +1,31 @@
 #!/usr/bin/env python3
 """
-cloe-desktop GIF 生成脚本
+cloe-desktop GIF generation script
 
-从绿背景参考图一键生成透明背景 GIF，用于桌面小组件动画。
+Generates a transparent-background GIF from a green-background reference image in one
+step, for desktop widget animations.
 
-用法:
+Usage:
+  # NOTE: --prompt values must stay in Chinese -- they are sent to a
+  # Chinese-tuned video generation API. Examples below preserved as-is.
   python3 generate_gif.py --action kiss --prompt "她缓缓嘟起嘴唇，做出可爱的飞吻动作" --duration 5
   python3 generate_gif.py --action wave --prompt "她开心地举起右手挥动打招呼" --duration 5
   python3 generate_gif.py --action nod --prompt "她轻轻点了点头，表示赞同"
 
-参数:
-  --action     动作名称，同时用作 GIF 文件名（如 kiss -> kiss.gif）
-  --prompt     视频动作描述（中文，描述女孩除了眨眼外的动作）
-  --duration   视频时长，默认 5 秒
-  --reference  绿背景参考图路径，默认用项目根目录的 reference_upperbody_greenbg.png
-  --output     GIF 输出路径，默认 public/gifs/{action}.gif
-  --no-copy    不自动复制到 public/gifs/（仅生成到 _work 目录）
+Arguments:
+  --action     Action name, also used as the GIF filename (e.g. kiss -> kiss.gif)
+  --prompt     Video action description (Chinese, describing the girl's motion aside from blinking)
+  --duration   Video duration, default 5 seconds
+  --reference  Green-background reference image path, defaults to
+               reference_upperbody_greenbg.png in the project root
+  --output     GIF output path, default public/gifs/{action}.gif
+  --no-copy    Don't auto-copy to public/gifs/ (only generate into the _work directory)
 
-流程:
-  1. wan2.7-i2v 生成视频（异步）
-  2. ffmpeg chromakey + palette → GIF
-  3. Python 后处理去绿色光晕 → 透明 GIF
-  4. 复制到 public/gifs/
+Pipeline:
+  1. wan2.7-i2v generates the video (async)
+  2. ffmpeg chromakey + palette -> GIF
+  3. Python post-processing removes the green color halo -> transparent GIF
+  4. Copy to public/gifs/
 """
 
 import argparse
@@ -52,7 +56,7 @@ WORK_DIR = os.path.join(CLOE_DATA_DIR, "gifs/_work_idle")
 
 
 def generate_video(first_frame_path, prompt, duration=5):
-    """用 wan2.7-i2v 生成视频，返回本地视频路径。"""
+    """Generate video with wan2.7-i2v, returning the local video path."""
     with open(first_frame_path, "rb") as f:
         img_b64 = base64.b64encode(f.read()).decode()
 
@@ -70,7 +74,7 @@ def generate_video(first_frame_path, prompt, duration=5):
         },
     }
 
-    # 提交异步任务
+    # Submit the async task
     resp = requests.post(
         "https://dashscope.aliyuncs.com/api/v1/services/aigc/video-generation/video-synthesis",
         headers={
@@ -89,7 +93,7 @@ def generate_video(first_frame_path, prompt, duration=5):
     task_id = resp.json()["output"]["task_id"]
     print(f"Task ID: {task_id}")
 
-    # 轮询等待
+    # Poll and wait
     for i in range(60):
         time.sleep(10)
         poll = requests.get(
@@ -116,11 +120,11 @@ def generate_video(first_frame_path, prompt, duration=5):
 
 
 def video_to_transparent_gif(video_path, output_path):
-    """ffmpeg chromakey + Python 去绿色光晕 → 透明 GIF。"""
+    """ffmpeg chromakey + Python removes green color halo -> transparent GIF."""
     raw_gif = os.path.join(WORK_DIR, f"{args.action}_raw.gif")
     palette = os.path.join(WORK_DIR, f"palette_{args.action}.png")
 
-    # Step 1: 生成调色板
+    # Step 1: generate the palette
     subprocess.run(
         [
             "ffmpeg", "-y", "-i", video_path,
@@ -131,7 +135,7 @@ def video_to_transparent_gif(video_path, output_path):
         timeout=60,
     )
 
-    # Step 2: 用调色板生成 GIF
+    # Step 2: generate the GIF using the palette
     subprocess.run(
         [
             "ffmpeg", "-y", "-i", video_path, "-i", palette,
@@ -142,7 +146,7 @@ def video_to_transparent_gif(video_path, output_path):
         timeout=60,
     )
 
-    # Step 3: Python 后处理去绿色光晕
+    # Step 3: Python post-processing removes the green color halo
     img = Image.open(raw_gif)
     frames = []
     durations = []
@@ -159,11 +163,11 @@ def video_to_transparent_gif(video_path, output_path):
         arr = np.array(frame, dtype=np.float64)
         r, g, b, a = arr[:, :, 0], arr[:, :, 1], arr[:, :, 2], arr[:, :, 3]
 
-        # 强绿色 → 完全透明
+        # Strong green -> fully transparent
         green_mask = (g > 80) & (g - r > 30) & (g - b > 30)
         arr[green_mask, 3] = 0
 
-        # 边缘绿色偏色修正
+        # Edge green tint correction
         alpha_u8 = arr[:, :, 3].astype(np.uint8)
         dilated = ndimage.binary_dilation(alpha_u8 < 128, iterations=2)
         edge_mask = (alpha_u8 >= 128) & dilated
@@ -174,7 +178,7 @@ def video_to_transparent_gif(video_path, output_path):
                 g[green_tint] * 0.4 + target_g * 0.6, 0, 255
             ).astype(np.uint8)
 
-        # 更大范围轻微绿色修正
+        # Slight green correction over a wider range
         dilated2 = ndimage.binary_dilation(alpha_u8 < 128, iterations=3)
         remaining = (alpha_u8 >= 128) & dilated2 & (g > r + 5) & (g > b + 5)
         if remaining.any():

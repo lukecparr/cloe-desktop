@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""批量生成 cloe-desktop GIF：并行提交视频任务，串行处理"""
+"""Batch-generate cloe-desktop GIFs: submit video tasks in parallel, process serially"""
 
 import base64, json, os, sys, time, subprocess
 import numpy as np
@@ -19,6 +19,8 @@ PROJECT_DIR = os.path.expanduser("~/work/cloe-desktop")
 WORK_DIR = os.path.join(PROJECT_DIR, "public/gifs/_work_actions")
 REFERENCE = os.path.join(PROJECT_DIR, "reference_upperbody_greenbg.png")
 
+# NOTE: these prompt values are sent as-is to the wan2.7-i2v video generation API,
+# which is tuned on Chinese prompts, so they must stay in Chinese.
 ACTIONS = {
     "nod": "一个美丽的亚洲女孩面对镜头，她轻轻地点了两下头，表示赞同和认可。女孩身体其他部分保持不动，只有头部微微上下晃动。纯绿色背景。电影质感，高清。",
     "wave": "一个美丽的亚洲女孩面对镜头，她开心地举起右手向镜头挥动打招呼，手臂自然摆动两三次。身体其他部分保持不动。纯绿色背景。电影质感，高清。",
@@ -46,7 +48,7 @@ def submit_task(action, prompt):
         json=payload, timeout=120,
     )
     task_id = resp.json()["output"]["task_id"]
-    print(f"[{action}] 提交成功: {task_id}")
+    print(f"[{action}] Submitted: {task_id}")
     return action, task_id
 
 def poll_task(action, task_id, max_wait=300):
@@ -63,14 +65,14 @@ def poll_task(action, task_id, max_wait=300):
             video_path = os.path.join(WORK_DIR, f"{action}_video.mp4")
             with open(video_path, "wb") as f:
                 f.write(video_bytes)
-            print(f"[{action}] 视频下载完成: {video_path} ({len(video_bytes)} bytes)")
+            print(f"[{action}] Video download complete: {video_path} ({len(video_bytes)} bytes)")
             return action, video_path
         elif status == "FAILED":
             msg = poll.json()["output"].get("message", "unknown")
-            print(f"[{action}] 失败: {msg}")
+            print(f"[{action}] Failed: {msg}")
             return action, None
         if i % 3 == 0:
-            print(f"[{action}] 等待中... {status} ({(i+1)*10}s)")
+            print(f"[{action}] Waiting... {status} ({(i+1)*10}s)")
     return action, None
 
 def video_to_gif(action, video_path, gif_path):
@@ -85,7 +87,7 @@ def video_to_gif(action, video_path, gif_path):
         "-lavfi", "[0:v]chromakey=0x00FF00:0.15:0.05,fps=10,scale=400:-1:flags=lanczos[x];[x][1:v]paletteuse",
         "-loop", "0", raw_gif], capture_output=True, timeout=60)
 
-    # 后处理去绿色光晕
+    # Post-process to remove the green color halo
     img = Image.open(raw_gif)
     frames, durations = [], []
     try:
@@ -118,12 +120,12 @@ def video_to_gif(action, video_path, gif_path):
     processed[0].save(gif_path, save_all=True, append_images=processed[1:],
         duration=durations[0], loop=0, disposal=2, optimize=False)
     size_mb = os.path.getsize(gif_path) / 1024 / 1024
-    print(f"[{action}] GIF 完成: {gif_path} ({len(processed)} frames, {size_mb:.1f}MB)")
+    print(f"[{action}] GIF complete: {gif_path} ({len(processed)} frames, {size_mb:.1f}MB)")
 
 # === Main ===
 os.makedirs(WORK_DIR, exist_ok=True)
 
-print("=== Step 1: 并行提交视频生成任务 ===")
+print("=== Step 1: submit video generation tasks in parallel ===")
 with ThreadPoolExecutor(max_workers=4) as executor:
     futures = {executor.submit(submit_task, a, p): a for a, p in ACTIONS.items()}
     tasks = {}
@@ -131,7 +133,7 @@ with ThreadPoolExecutor(max_workers=4) as executor:
         action, task_id = f.result()
         tasks[action] = task_id
 
-print(f"\n=== Step 2: 轮询等待 {len(tasks)} 个任务 ===")
+print(f"\n=== Step 2: poll and wait for {len(tasks)} tasks ===")
 with ThreadPoolExecutor(max_workers=4) as executor:
     futures = {executor.submit(poll_task, a, tid): a for a, tid in tasks.items()}
     results = {}
@@ -139,19 +141,19 @@ with ThreadPoolExecutor(max_workers=4) as executor:
         action, video_path = f.result()
         results[action] = video_path
 
-print(f"\n=== Step 3: 转换 GIF ===")
+print(f"\n=== Step 3: convert to GIF ===")
 success = []
 for action in ACTIONS:
     vp = results.get(action)
     if vp:
         gif_path = os.path.join(WORK_DIR, f"{action}.gif")
         video_to_gif(action, vp, gif_path)
-        # 复制到 public/gifs/
+        # Copy to public/gifs/
         public = os.path.join(PROJECT_DIR, "public/gifs", f"{action}.gif")
         import shutil
         shutil.copy(gif_path, public)
         success.append(action)
     else:
-        print(f"[{action}] 跳过（视频生成失败）")
+        print(f"[{action}] Skipped (video generation failed)")
 
-print(f"\n=== 完成！成功: {success} ===")
+print(f"\n=== Done! Succeeded: {success} ===")

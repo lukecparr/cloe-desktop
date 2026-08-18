@@ -1,68 +1,68 @@
-# 动作触发、TTS 语音、GIF 生成
+# Action Triggers, TTS Voice, GIF Generation
 
-通过 HTTP API 发现和触发 Cloe 桌面角色的表情动作动画。
+Discover and trigger the Cloe desktop character's expression/action animations through the HTTP API.
 
-## 动态发现可用动作
+## Dynamically Discover Available Actions
 
-**不要硬编码动作列表。** 通过 API 实时获取：
+**Do not hardcode the action list.** Fetch it live via the API:
 
 ```bash
 curl -s http://localhost:19851/actions
 curl -s http://localhost:19851/action-sets
 ```
 
-`GET /actions` 返回含 `name`、`description`、`hookNames`、`special` 等字段的动作列表。
+`GET /actions` returns a list of actions with fields such as `name`, `description`, `hookNames`, `special`, etc.
 
-## 触发动作
+## Triggering an Action
 
 ```bash
 curl -s http://localhost:19851/action -d '{"action":"<ACTION_NAME>"}'
 ```
 
-动作播放约 3 秒后自动恢复 idle 循环。
+The action plays for about 3 seconds, then automatically returns to the idle loop.
 
-## 系统动作
+## System Actions
 
-| 动作 | 说明 |
+| Action | Description |
 |------|------|
-| `working` | 敲键盘，锁定工作模式 |
-| `idle` | 恢复 idle 循环 |
-| `wave` | 新会话打招呼 |
-| `kiss` | 会话结束 |
+| `working` | Typing on a keyboard, locks the "working" mode |
+| `idle` | Returns to the idle loop |
+| `wave` | Greeting for a new session |
+| `kiss` | Session ended |
 
-## 语音动作（speak）
+## Voice Action (speak)
 
-> **Hermes 语音对话模式下的 TTS 策略**：Hermes 自带 TTS（前端/后端）会导致重复播放——前端按句子拆分调用多次 TTS，后端每 turn 调一次。**语音输出统一用 `generate_tts.py --speak`**（走 Cloe Desktop bridge），不依赖 Hermes 内置 TTS。详见 `hermes-voice-setup` skill 的"三重播放坑"章节。
+> **TTS strategy in Hermes voice conversation mode**: Hermes's built-in TTS (frontend/backend) causes duplicate playback -- the frontend splits by sentence and calls TTS multiple times, and the backend calls it once per turn. **Voice output should always use `generate_tts.py --speak`** (via the Cloe Desktop bridge), and not rely on Hermes's built-in TTS. See the "triple playback pitfall" section of the `hermes-voice-setup` skill for details.
 >
-> **语音对话节奏**：用户用 Ctrl+B 语音输入 → Whisper 转文字 → Agent 回复 → Agent 手动调 `--speak` 播放语音。每轮对话只调一次 `--speak`，不要同时触发 Hermes 的自动 TTS。
+> **Voice conversation cadence**: the user speaks via Ctrl+B voice input -> Whisper transcribes -> the agent replies -> the agent manually calls `--speak` to play the voice. Call `--speak` only once per conversation turn, and don't also trigger Hermes's automatic TTS.
 
-### 方式一：TTS 动态语音（推荐）
+### Method 1: Dynamic TTS (recommended)
 
-链路：`generate_tts.py` 生成 MP3 → 保存到 `~/.cloe/audio_cache/` → bridge `/tts/` 路由 serve → speak 播放。
+Pipeline: `generate_tts.py` generates an MP3 -> saved to `~/.cloe/audio_cache/` -> served by the bridge's `/tts/` route -> played via speak.
 
 ```bash
-# 生成 + 自动触发桌面 speak 播放
+# Generate + automatically trigger desktop speak playback
 python3 ~/.hermes/skills/creative/cloe-desktop-action/scripts/generate_tts.py \
-  --text "要说的话" --speak
+  --text "Text to speak" --speak
 
-# 仅生成音频（输出 MP3 路径到 stdout）
+# Generate audio only (prints the MP3 path to stdout)
 python3 ~/.hermes/skills/creative/cloe-desktop-action/scripts/generate_tts.py \
-  --text "要说的话"
+  --text "Text to speak"
 
-# 指定输出路径
+# Specify an output path
 python3 ~/.hermes/skills/creative/cloe-desktop-action/scripts/generate_tts.py \
-  --text "要说的话" --output /tmp/custom.mp3
+  --text "Text to speak" --output /tmp/custom.mp3
 
-# 强制指定 provider
+# Force a specific provider
 python3 ~/.hermes/skills/creative/cloe-desktop-action/scripts/generate_tts.py \
-  --text "要说的话" --provider cosyvoice
+  --text "Text to speak" --provider cosyvoice
 ```
 
-stdout 只输出 MP3 文件路径，日志输出到 stderr。
+stdout only prints the MP3 file path; logs go to stderr.
 
-#### TTS 配置
+#### TTS Configuration
 
-配置文件：`~/.cloe/tts-config.json`
+Config file: `~/.cloe/tts-config.json`
 
 ```json
 {
@@ -80,225 +80,225 @@ stdout 只输出 MP3 文件路径，日志输出到 stderr。
 }
 ```
 
-- `mosi` — MOSI 云端 TTS（快 ~3s）**← 默认**
-- `cosyvoice` — 阿里云 CosyVoice（多音色可选）
+- `mosi` -- MOSI cloud TTS (fast, ~3s) **<- default**
+- `cosyvoice` -- Alibaba Cloud CosyVoice (multiple voices available)
 
-#### MOSI API 调用规范
+#### MOSI API Call Convention
 
-脚本已封装，一般不需要手动调。如需手动：
+The script already wraps this; you generally don't need to call it manually. If you do:
 
 ```python
 headers = {
-    "Authorization": f"Bearer {api_key}",  # 必须用 Bearer auth
+    "Authorization": f"Bearer {api_key}",  # must use Bearer auth
     "Content-Type": "application/json",
 }
 payload = {
-    "model": "moss-tts",        # 必须有
+    "model": "moss-tts",        # required
     "text": text,
     "voice_id": voice_id,
     "sampling_params": {"temperature": 1.7, "top_p": 0.8, "top_k": 25},
 }
 ```
 
-#### 播放要点
+#### Playback Notes
 
-- TTS 文本用完整连贯句子，少用省略号/波浪号
-- MOSI 返回 WAV，脚本自动转 MP3（Electron `new Audio()` 播放 WAV 不完整）
-- 手动 speak 已有音频：`curl -s http://localhost:19851/action -d '{"action":"speak","audio_url":"http://localhost:19851/tts/<FILENAME>.mp3"}'`
-- **speak 播放期间其他 action 被 drop，另一个 speak 可覆盖**——长内容合并成一句 TTS 一次发完
+- Use complete, coherent sentences for TTS text; avoid ellipses/tildes
+- MOSI returns WAV; the script automatically converts to MP3 (Electron's `new Audio()` doesn't play WAV completely)
+- To manually speak existing audio: `curl -s http://localhost:19851/action -d '{"action":"speak","audio_url":"http://localhost:19851/tts/<FILENAME>.mp3"}'`
+- **Other actions are dropped while speak is playing, and another speak call can override it** -- merge long content into a single TTS call sent all at once
 
-### 方式二：预录语音（`audio` 字段）
+### Method 2: Pre-recorded Voice (`audio` field)
 
 ```bash
 curl -s http://localhost:19851/action -d '{"action":"speak","audio":"doing"}'
 ```
 
-预录文件存放在 `~/.cloe/audio_cache/`。现有：`doing.mp3`、`done.mp3`。
-添加新语音：TTS 生成 → `ffmpeg` 转 mp3 → 放 `~/.cloe/audio_cache/`。
+Pre-recorded files live in `~/.cloe/audio_cache/`. Existing ones: `doing.mp3`, `done.mp3`.
+To add a new voice line: generate via TTS -> convert to mp3 with `ffmpeg` -> place in `~/.cloe/audio_cache/`.
 
-### 方式三：data URL（短音频，<5s）
+### Method 3: data URL (short audio, <5s)
 
-base64 编码后传 `data:audio/mpeg;base64,...`，curl 上限约 128KB。
+Base64-encode it and pass `data:audio/mpeg;base64,...`; the curl limit is about 128KB.
 
-## GIF 生成新动作
+## Generating a New Action GIF
 
-完整链路：参考图 → AI 视频 → chromakey → 透明 GIF。
+Full pipeline: reference image -> AI video -> chromakey -> transparent GIF.
 
 ```bash
-# 单个生成（默认绿幕，输出到 ~/.cloe/gifs/{action}.gif）
+# Generate a single action (default green screen, output to ~/.cloe/gifs/{action}.gif)
 python3 ~/.hermes/skills/creative/cloe-desktop-action/scripts/generate_gif_v2.py \
   --action pout \
-  --prompt "她微微嘟起嘴唇，表情可爱委屈，身体保持不动。电影质感，高清。"
+  --prompt "She pouts slightly, with a cute, sulky expression, body staying still. Cinematic, high definition."
 
-# 蓝幕模式（对黑发效果更好）
+# Blue screen mode (works better for black hair)
 python3 ~/.hermes/skills/creative/cloe-desktop-action/scripts/generate_gif_v2.py \
   --action pout \
   --prompt "..." --chromakey blue
 
-# 指定参考图
+# Specify a reference image
 python3 ~/.hermes/skills/creative/cloe-desktop-action/scripts/generate_gif_v2.py \
   --action wave \
   --prompt "..." --reference ~/.cloe/references/default.png
 ```
 
-脚本自动完成：压缩参考图 → pad 加宽 → 百炼 wan2.7-i2v 生成视频 → ffmpeg chromakey → 去色晕 → 透明 GIF → 复制到 `~/.cloe/gifs/`。
+The script automatically handles: compressing the reference image -> padding it wider -> generating video via Bailian wan2.7-i2v -> ffmpeg chromakey -> removing color fringing -> transparent GIF -> copying to `~/.cloe/gifs/`.
 
-### 生成后注册动作（脚本不会自动注册！）
+### Registering the Action After Generation (the script does NOT register it automatically!)
 
-在活跃 set（通常是 `default`）中需要更新 **三个** 地方：
+In the active set (usually `default`), **three** places need to be updated:
 
-1. **`animations`** — 动作名映射到 GIF 路径：
+1. **`animations`** -- maps the action name to the GIF path:
    ```json
    "pout": "gifs/pout.gif"
    ```
-2. **`actionInfo`** — 动作描述元数据：
+2. **`actionInfo`** -- action description metadata:
    ```json
-   "pout": { "description": "嘟嘴", "descriptionEn": "Pout" }
+   "pout": { "description": "Pout", "descriptionEn": "Pout" }
    ```
-3. **`actionMap`** — hook 名映射到动作名（**hook 触发的动作必须加，否则不会响应触发！**）：
+3. **`actionMap`** -- maps hook names to action names (**required for hook-triggered actions, or the trigger won't fire!**):
    ```json
    "pout": "pout"
    ```
-   > 如果省略 `actionMap` 条目，动作虽然出现在 `/actions` 列表中但 hook 触发时不会播放。
+   > If the `actionMap` entry is omitted, the action will show up in the `/actions` list but won't play when triggered by a hook.
 
-注册完成后：
-- Cloe 自动监听文件变化重载，无需重启
-- 验证：`curl -s http://localhost:19851/actions` 检查新动作
-- 测试：`curl -s http://localhost:19851/action -d '{"action":"pout"}'`
+After registering:
+- Cloe automatically watches for file changes and reloads, no restart needed
+- Verify: `curl -s http://localhost:19851/actions` to check the new action
+- Test: `curl -s http://localhost:19851/action -d '{"action":"pout"}'`
 
-> ⚠️ 只复制 GIF 到 `~/.cloe/gifs/` 不够——必须同时更新 action-sets.json 的三个字段。
+> Warning: Just copying the GIF to `~/.cloe/gifs/` is not enough -- you must also update all three fields in action-sets.json.
 
-**推荐用脚本自动注册**（避免手动编辑 JSON 出错）：
+**Prefer the auto-registration script** (avoids mistakes from manually editing JSON):
 ```bash
 python3 ~/.hermes/skills/creative/cloe-desktop-action/scripts/register_action.py \
   --action pout \
-  --description "嘟嘴" \
+  --description "Pout" \
   --description-en "Pout" \
-  --trigger hook   # hook 或 idle
+  --trigger hook   # hook or idle
 ```
-脚本会自动添加 animations + actionInfo + actionMap 三项，并处理 `idlePlaylist`（trigger=idle 时加入）。
+The script automatically adds the animations + actionInfo + actionMap entries, and handles `idlePlaylist` (adds the action to it when trigger=idle).
 
-### Prompt 写法要点
+### Prompt Writing Tips
 
-- **身体保持不动**：只描述头部/上半身微动作（大幅度动作如跳舞除外）
-- **确保人物完整在画面内**：脚本已内置 `pad_reference_to_wider()` 自动将竖屏参考图两侧填充色幕变成 0.75 宽幅（1482×2829→2121×2829），最终 GIF 输出 400×534
-- **色幕一致性**：pad 填充的颜色与 `--chromakey` 一致。用 `--chromakey blue` 时脚本自动调 `convert_chroma_color()` 将绿幕参考图转成蓝幕再 pad
-- **避开百炼审查**：不要在 prompt 写"纯绿色背景"（触发 `Green net check`）。`prompt_extend=False` 已关闭。prompt 避开"胸前""双手"等敏感词
-- **电影质感，高清**：提高生成质量
-- 时长一般 3-5 秒
+- **Keep the body still**: only describe subtle head/upper-body movements (except for large-motion actions like dancing)
+- **Make sure the character stays fully in frame**: the script has a built-in `pad_reference_to_wider()` that automatically pads a portrait reference image on both sides with the chroma color to a 0.75 aspect ratio (1482x2829 -> 2121x2829); the final GIF output is 400x534
+- **Chroma color consistency**: the padding color must match `--chromakey`. When using `--chromakey blue`, the script automatically calls `convert_chroma_color()` to convert the green-screen reference to blue screen before padding
+- **Avoid Bailian's content review**: don't write "pure green background" in the prompt (triggers `Green net check`). `prompt_extend=False` is already disabled. Avoid sensitive words like "chest" or "hands" in the prompt
+- **Cinematic, high definition**: improves generation quality
+- Duration is typically 3-5 seconds
 
-### 清晰度优化要点
+### Clarity Optimization Tips
 
-GIF 模糊的根因是**参考图被压缩太多 + 视频分辨率太低**。生成链路中的关键参数：
+The root cause of blurry GIFs is **over-compressing the reference image + video resolution being too low**. Key parameters in the generation pipeline:
 
-| 参数 | 推荐值 | 说明 |
+| Parameter | Recommended value | Notes |
 |------|--------|------|
-| `compress_image` 长边上限 | **1920px** | pad 后参考图更大（1482→2121px宽），压缩到 1280 会让角色只剩 670px，模糊 |
-| 视频分辨率 | **1080P** | 720P 输出的角色像素不足，1080P 下 GIF 清晰度显著提升 |
-| pad target_ratio | **0.75** | 1.0 正方形面积太大导致角色像素被稀释；0.75 在留空间和保持清晰度间取得平衡 |
-| ffmpeg scale | `400:-1` | 固定 400px 宽，高度自适应比例（0.75 → 533px） |
+| `compress_image` long-edge cap | **1920px** | after padding, the reference image is larger (1482->2121px wide); compressing to 1280 leaves the character at only 670px, causing blur |
+| Video resolution | **1080P** | 720P output doesn't give the character enough pixels; 1080P noticeably improves GIF clarity |
+| pad target_ratio | **0.75** | 1.0 (square) wastes too much area, diluting the character's effective pixels; 0.75 balances extra space against clarity |
+| ffmpeg scale | `400:-1` | fixed 400px width, height scales proportionally (0.75 -> 533px) |
 
-> ⚠️ **三参数联动**：改 pad 比例必须同时考虑 compress 上限和视频分辨率。pad 面积越大 → 压缩后角色越小 → 视频分辨率越重要。
+> Warning: **The three parameters are linked** -- changing the pad ratio requires reconsidering the compression cap and video resolution together. The larger the padded area, the smaller the character becomes after compression, and the more video resolution matters.
 
-> ⚠️ **临时文件清理顺序**：`generate_video()` 中必须先 `open(compressed_path)` 读到内存 base64，再 `os.unlink()` 删临时文件。反过来会导致 FileNotFoundError。
+> Warning: **Temp file cleanup order** -- in `generate_video()`, you must `open(compressed_path)` and read it into memory as base64 *before* calling `os.unlink()` to delete the temp file. Doing it the other way around causes a FileNotFoundError.
 
-### 窗口尺寸与 GIF 裁切
+### Window Size and GIF Cropping
 
-GIF 尺寸随生成比例变化（旧竖屏 400×764，新 0.75 比例 400×534）。窗口 `BASE_WIDTH` 和 `BASE_HEIGHT` 必须考虑三个因素：
+GIF dimensions vary with the generation ratio (old portrait: 400x764, new 0.75 ratio: 400x534). The window's `BASE_WIDTH` and `BASE_HEIGHT` must account for three factors:
 
-1. **GIF 像素尺寸**（宽度 400px 是基准）
-2. **characterPosition.x**（角色偏右时右侧空间 = width × (1-x)，需 > GIF显示宽度）
-3. **characterSize.scale**（scale=1.2 时角色实际宽度 = 400×1.2=480px）
+1. **GIF pixel dimensions** (400px width is the baseline)
+2. **characterPosition.x** (when the character is positioned to the right, the space on the right = width * (1-x), which must exceed the GIF's display width)
+3. **characterSize.scale** (at scale=1.2, the character's actual width = 400*1.2 = 480px)
 
-当前配置：`BASE_WIDTH=640, position.x=0.65, scale=1.2` → 右侧空间 = 640×0.35=224px > 480px（不够！实际靠 GIF 比例变窄补足）。
+Current config: `BASE_WIDTH=640, position.x=0.65, scale=1.2` -> right-side space = 640*0.35 = 224px > 480px (not enough! In practice this is compensated for by the GIF's narrower aspect ratio).
 
-### GIF 缓存问题（Chromium file:// 缓存）
+### GIF Caching Issue (Chromium `file://` caching)
 
-打包版通过 `file://` 协议加载 GIF。Chromium 按完整 URL 缓存图片，当 `~/.cloe/gifs/xxx.gif` 文件被替换后，URL 不变，Chromium 返回缓存的旧版。
+The packaged app loads GIFs via the `file://` protocol. Chromium caches images by full URL, so when `~/.cloe/gifs/xxx.gif` is replaced on disk, the URL stays the same and Chromium returns the cached old version.
 
-**解决方案**（已在 renderer.js 实现）：`preloadGif()` 给 URL 加 `?v=N` 版本号，每次 `set-config`（action-sets 热加载）时 `_gifVersion++`，强制重新从磁盘加载。
+**Solution** (already implemented in renderer.js): `preloadGif()` appends a `?v=N` version number to the URL, and increments `_gifVersion++` on every `set-config` (action-sets hot reload) to force a fresh load from disk.
 
-### 生成脚本踩坑记录
+### Generation Script Pitfalls
 
-**1. 百炼内容审查（"Green net check failed"）**
-- 绿幕参考图 + prompt 含"胸前""双手"等词 → 触发文本审查
-- 解法：用 `--chromakey blue`（脚本自动将绿幕参考图转成蓝幕），`prompt_extend=False`（关闭自动扩写避免引入敏感词），prompt 避开敏感描述
+**1. Bailian content review ("Green net check failed")**
+- Green-screen reference image + prompt containing words like "chest"/"hands" -> triggers text review
+- Fix: use `--chromakey blue` (the script automatically converts the green-screen reference to blue screen), `prompt_extend=False` (disables auto-expansion to avoid introducing sensitive words), and avoid sensitive descriptions in the prompt
 
-**2. 绿幕→蓝幕转换**
-- `default.png` 是绿幕背景。用 `--chromakey blue` 时脚本自动调 `convert_chroma_color()` 将绿色背景转成蓝色，再 pad 蓝色两侧，保证整张图色幕统一
-- chromakey 不在 ffmpeg 阶段做（会误删白衣服），完全交给 Python 后处理
+**2. Green screen -> blue screen conversion**
+- `default.png` has a green-screen background. With `--chromakey blue`, the script automatically calls `convert_chroma_color()` to convert the green background to blue, then pads both sides with blue, keeping the chroma color consistent across the whole image
+- Chromakey is not done at the ffmpeg stage (it would incorrectly remove white clothing); it's handled entirely by Python post-processing
 
-**3. 清晰度优化**
-- `compress_image` 长边上限 1280→1920（pad 后图更大，1280 会让角色只有 670px）
-- 视频分辨率 720P→1080P（720P 生成的角色太模糊）
-- pad 比例 0.75（不是 1.0，1.0 正方形浪费太多面积导致角色有效像素太少）
-- `prompt_extend=False`（关闭百炼自动扩写，避免引入敏感词触发审查）
+**3. Clarity optimization**
+- `compress_image` long-edge cap raised from 1280 to 1920 (after padding the image is larger; 1280 would shrink the character to only 670px)
+- Video resolution raised from 720P to 1080P (720P output was too blurry)
+- pad ratio 0.75 (not 1.0 -- a square wastes too much area, leaving too few effective pixels on the character)
+- `prompt_extend=False` (disables Bailian's automatic prompt expansion, avoiding sensitive words that trigger review)
 
-**4. 参考图 pad（防止角色动作超出画面）**
-- 原始参考图 1482×2829（ratio 0.52，竖屏），角色一抬手就出画
-- pad 到 0.75 比例（2121×2829），两侧填充色幕，角色有空间活动
-- chromakey 时两侧色幕一并去掉
+**4. Reference image padding (prevents the character's motion from leaving the frame)**
+- The original reference image is 1482x2829 (ratio 0.52, portrait), and the character moves out of frame as soon as they raise a hand
+- Pad to a 0.75 ratio (2121x2829), filling both sides with the chroma color, giving the character room to move
+- The padded sides are removed along with the background during chromakey
 
-**5. 临时文件清理顺序**
-- pad → compress → 读 base64 → 然后才删临时文件
-- 先读进内存再清理，避免文件被提前删除导致 FileNotFoundError
+**5. Temp file cleanup order**
+- pad -> compress -> read as base64 -> only then delete the temp files
+- Read into memory first, then clean up, to avoid a FileNotFoundError from deleting files too early
 
-**6. ⚠️ AI 视频背景漂移（最隐蔽的问题）**
-- wan2.7-i2v 第一帧保留参考图的色幕背景，但后续帧模型会**自由发挥**把背景换成其他场景（如夕阳、室内等）
-- 症状：视频前几帧蓝色背景正常，第 20 帧后背景变成暖色橙红 → chromakey 去不掉 → GIF 背景残留
-- 根因：prompt 里没有明确约束背景保持纯色，模型认为色幕"不合理"就帮你换了
-- **解法**：脚本自动在 prompt 末尾追加背景约束词（蓝幕加"纯蓝色背景"，绿幕加"纯色单色背景"避开审查）
-- 验证方法：提取视频第 1/25/49 帧，检查色幕颜色占比是否稳定（>70% 表示背景没漂移）
+**6. Warning: AI video background drift (the most subtle issue)**
+- wan2.7-i2v keeps the chroma-color background from the reference image in the first frame, but in later frames the model **improvises** and may replace the background with a different scene (e.g. sunset, indoors, etc.)
+- Symptom: the blue background looks fine in the first few frames, but after frame 20 it turns warm orange -> chromakey can't remove it -> background residue remains in the GIF
+- Root cause: the prompt doesn't explicitly constrain the background to stay a solid color, so the model decides the chroma screen is "unrealistic" and changes it
+- **Fix**: the script automatically appends a background constraint to the end of the prompt (blue screen adds "solid blue background"; green screen adds "solid monochrome background" to avoid triggering review)
+- Verification method: extract frames 1/25/49 of the video and check whether the chroma-color proportion stays stable (>70% means the background hasn't drifted)
 
-### Chromium `file://` 图片缓存（打包版 GIF 不更新）
+### Chromium `file://` Image Caching (packaged-build GIFs don't update)
 
-打包版用 `file://` 协议加载 GIF。Chromium 按完整 URL 缓存图片，磁盘上文件被替换后 URL 没变就返回缓存的旧图。`src/renderer.js` 已内置 cache-busting：`preloadGif()` 加 `?v=N` 参数，`set-config` 时 `_gifVersion++`。
+The packaged build loads GIFs via the `file://` protocol. Chromium caches images by full URL, so if the file on disk is replaced but the URL stays the same, it returns the cached old image. `src/renderer.js` already has cache-busting built in: `preloadGif()` appends a `?v=N` parameter, and `_gifVersion++` happens on `set-config`.
 
-重新生成 GIF 后需要同时更新 `public/gifs/` 和 `dist/gifs/` 的旧文件，否则全新安装时 `seedPackagedDataDir` 拷贝旧版。
+After regenerating a GIF, you also need to update the old files in both `public/gifs/` and `dist/gifs/`, otherwise a fresh install will copy the old version via `seedPackagedDataDir`.
 
-### chromakey 误删白色衣服（最棘手的抠图问题）
+### Chromakey Incorrectly Removing White Clothing (the trickiest matting issue)
 
-**症状**：GIF 背景透明了，但角色白色衣服上出现大面积透明孔洞。
+**Symptom**: the GIF background becomes transparent, but large transparent holes appear in the character's white clothing.
 
-**根因**：AI 视频中色幕背景的光照会溢出到角色身上，白色衣服被蓝色/绿色光线污染，变成偏蓝/偏白的浅色。ffmpeg chromakey 基于颜色匹配，无法区分"被光照污染的白色衣服"和"背景色"——similarity 调高去干净背景但误删白衣服，调低保留白衣服但背景残留。
+**Root cause**: in the AI video, lighting from the chroma-color background bleeds onto the character, tinting white clothing with a blue/green cast. ffmpeg chromakey matches by color and can't distinguish "white clothing contaminated by chroma-color lighting" from "background color" -- raising similarity cleans up the background but removes white clothing, lowering it keeps the white clothing but leaves background residue.
 
-**关键数据**（蓝幕 heart 动作测试）：
-| similarity | 总透明 | 角色区域透明 | 说明 |
+**Key data** (blue-screen heart action test):
+| similarity | total transparent | transparent within character area | notes |
 |-----------|--------|-----------|------|
-| 0.30 | 85% | **62%** | 白衣服几乎全没了 |
-| 0.20 | 69% | 22% | 背景残留多 |
-| 0.15 | 69% | 22% | 同上 |
+| 0.30 | 85% | **62%** | white clothing almost entirely gone |
+| 0.20 | 69% | 22% | lots of background residue |
+| 0.15 | 69% | 22% | same as above |
 
-绿幕测试更严重——sim=0.12 时角色区域 99.8% 透明。
+Green screen tests were even worse -- at sim=0.12, 99.8% of the character area was transparent.
 
-**当前方案**：ffmpeg 阶段不做 chromakey（只做 palettegen + paletteuse），背景去除完全交给 Python 后处理（已有色幕检测 + 去色晕逻辑）。Python 后处理的色幕检测阈值更精确，能区分纯色幕和被光照污染的衣服区域。
+**Current approach**: don't do chromakey at the ffmpeg stage (only palettegen + paletteuse); background removal is handled entirely by Python post-processing (which already has chroma-color detection + fringe-removal logic). The Python post-processing's chroma-color detection threshold is more precise and can distinguish solid chroma color from clothing contaminated by lighting.
 
-> ⚠️ 如果 Python 后处理仍有白衣服误删，可能需要改为基于参考图的 mask 方案：用第一帧（纯参考图）生成精确 mask，后续帧只处理 mask 外的背景区域。
+> Warning: if Python post-processing still incorrectly removes white clothing, a mask-based approach using the reference image may be needed: generate a precise mask from the first frame (the pure reference image), and only process the background outside the mask in subsequent frames.
 
-### 管理界面 API（需 bridge 服务运行）
+### Admin UI API (requires the bridge service to be running)
 
 ```bash
-# 异步生成，返回 202 + taskId
+# Async generation, returns 202 + taskId
 curl -s -X POST http://localhost:19851/action-sets/default/generate-action \
   -H "Content-Type: application/json" \
   -d '{"name":"pout","prompt":"...","duration":5}'
 
-# 查询任务状态
+# Query task status
 curl -s http://localhost:19851/generation-tasks/<taskId>
 ```
 
-自动完成：生成 GIF → 更新 action-sets.json → 广播到 renderer。
+Automatically handles: generating the GIF -> updating action-sets.json -> broadcasting to the renderer.
 
-## Walk 动作（walk_right / walk_left）
+## Walk Action (walk_right / walk_left)
 
-- `walk_right` 和 `walk_left` 是两个独立 GIF 文件，`walk_left` 是镜像
-- Walk 动作有特殊逻辑（窗口移动 + GIF 切换 + 边缘检测 + 方向切换）
-- GIF 生成后需要裁掉前几帧起立/预备动作（分析质心 Y 确定裁剪点）
-- 生成镜像：`frames_left = [f.transpose(Image.FLIP_LEFT_RIGHT) for f in frames]`
+- `walk_right` and `walk_left` are two separate GIF files; `walk_left` is a mirror image
+- The walk action has special logic (window movement + GIF switching + edge detection + direction switching)
+- After GIF generation, the first few frames (standing up/getting-ready motion) need to be trimmed (analyze the centroid Y to determine the cut point)
+- Generating the mirror: `frames_left = [f.transpose(Image.FLIP_LEFT_RIGHT) for f in frames]`
 
-## 截图透明窗口
+## Screenshotting a Transparent Window
 
-Cloe Desktop 是 Electron 透明 overlay 窗口，`screencapture -R` 无法截取。必须用 PyObjC：
+Cloe Desktop is an Electron transparent overlay window, so `screencapture -R` can't capture it. You must use PyObjC:
 
 ```python
 import Quartz
@@ -310,7 +310,7 @@ for w in windows:
     if 'Cloe' in owner or 'Electron' in owner:
         bounds = w.get('kCGWindowBounds', {})
         x, y, ww, h = bounds['X'], bounds['Y'], bounds['Width'], bounds['Height']
-        # 用 kCGWindowListOptionOnScreenOnly 截取区域所有可见图层
+        # Use kCGWindowListOptionOnScreenOnly to capture all visible layers in the region
         image = Quartz.CGWindowListCreateImage(
             Quartz.CGRectMake(x, y, ww, h),
             Quartz.kCGWindowListOptionOnScreenOnly,
@@ -324,32 +324,32 @@ for w in windows:
             break
 ```
 
-> ⚠️ 必须用 `kCGWindowListOptionOnScreenOnly`，`kCGWindowListOptionIncludingWindow` 对透明窗口=空白。
+> Warning: you must use `kCGWindowListOptionOnScreenOnly` -- `kCGWindowListOptionIncludingWindow` returns a blank image for transparent windows.
 
-## Chat 消息注入
+## Chat Message Injection
 
-通过 `/chat/message` 向聊天窗口注入消息（文本 + 图片），注入的消息显示在聊天框中。
+Inject a message (text + image) into the chat window via `/chat/message`; injected messages appear in the chat box.
 
 ```bash
-# 图片太大（~6MB base64）无法用命令行参数传，用 python 构造 JSON 文件再 curl -d @file
+# Images are too large (~6MB base64) to pass as a command-line argument, so build the JSON file with python, then curl -d @file
 base64 -i /path/to/photo.png > /tmp/img_b64.txt
 python3 -c "
 import json
 with open('/tmp/img_b64.txt','r') as f: b64=f.read().strip()
-json.dump({'role':'assistant','content':'描述文字','image':b64}, open('/tmp/inject.json','w'))
+json.dump({'role':'assistant','content':'Description text','image':b64}, open('/tmp/inject.json','w'))
 "
 curl -s -X POST http://localhost:19851/chat/message \
   -H 'Content-Type: application/json' \
   -d @/tmp/inject.json
-# 返回 {"ok":true}
+# Returns {"ok":true}
 ```
 
-- 图片点击后用 `window.open` 弹出系统新窗口（黑底居中），直接看图
-- **不要用自定义模态框**——不要实现 `previewImage` state、`chat-image-modal` overlay 等，之前试过被否决
+- Clicking an image opens a new system window via `window.open` (centered on black) to view it directly
+- **Don't build a custom modal** -- don't implement a `previewImage` state, `chat-image-modal` overlay, etc. -- this was tried before and rejected
 
-## 注意事项
+## Notes
 
-- 动作间隔至少 3-5 秒，太快会被打断
-- `clients=0` 时动作不生效
-- `action-sets.json` 和 `plugin-rules.json` 支持热加载（rules 有 5 秒 TTL 缓存）
-- `plugin.yaml` 的 hooks 不支持热加载，修改后必须重启 Hermes 进程
+- Leave at least 3-5 seconds between actions, or they get interrupted too quickly
+- Actions have no effect when `clients=0`
+- `action-sets.json` and `plugin-rules.json` support hot reload (rules have a 5-second TTL cache)
+- Hooks in `plugin.yaml` do not support hot reload -- you must restart the Hermes process after changes

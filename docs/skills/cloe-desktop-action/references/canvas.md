@@ -1,32 +1,32 @@
-# Excalidraw 画布绘制
+# Excalidraw Canvas Drawing
 
-通过 HTTP API 在 Cloe Desktop 内嵌的 Excalidraw 画布上实时绘图。
+Draw on the Excalidraw canvas embedded in Cloe Desktop in real time through the HTTP API.
 
-## 前置条件
+## Prerequisites
 
 ```bash
-# 切换到 Canvas 模式
+# Switch to Canvas mode
 curl -s -X POST http://localhost:19851/canvas/show -H 'Content-Type: application/json' -d '{"mode":"canvas"}'
 
-# 隐藏 overlay（回到角色模式）
+# Hide the overlay (return to character mode)
 curl -s -X POST http://localhost:19851/canvas/hide
 
-# 切到 Terminal 模式
+# Switch to Terminal mode
 curl -s -X POST http://localhost:19851/canvas/show -H 'Content-Type: application/json' -d '{"mode":"terminal"}'
 ```
 
-## 深色背景配色建议
+## Color Recommendations for a Dark Background
 
-画布背景为**完全透明**，深色文字几乎不可见。
+The canvas background is **fully transparent**, so dark text is nearly invisible.
 
-- **文字颜色**：`#ffffff`（白色）或浅色（`#dfe6e9`、`#b2bec3`）
-- **容器/线条**：饱和色系（`#a29bfe` 紫、`#55efc4` 绿、`#fd79a8` 粉、`#74b9ff` 蓝、`#ffeaa7` 黄），`backgroundColor` 加 `33` 或 `44` 后缀做半透明
+- **Text color**: `#ffffff` (white) or light colors (`#dfe6e9`, `#b2bec3`)
+- **Containers/lines**: saturated colors (`#a29bfe` purple, `#55efc4` green, `#fd79a8` pink, `#74b9ff` blue, `#ffeaa7` yellow); append `33` or `44` to `backgroundColor` for semi-transparency
 
 ```json
 { "strokeColor": "#a29bfe", "backgroundColor": "#a29bfe44" }
 ```
 
-## 绘制元素
+## Drawing Elements
 
 ```bash
 curl -s -X POST http://localhost:19851/canvas/excalidraw/draw \
@@ -44,108 +44,108 @@ curl -s -X POST http://localhost:19851/canvas/excalidraw/draw \
       "strokeColor": "#a8e6cf", "strokeWidth": 2 }
   ]
 }'
-# 返回 {"ok":true,"count":3}
+# Returns {"ok":true,"count":3}
 ```
 
-只需传最简 Skeleton JSON，CanvasMode 自动补全所有必需字段并正确计算文字尺寸。绘制后自动 `scrollToContent({ fitToContent: true })`。
+Just pass the minimal skeleton JSON -- CanvasMode automatically fills in all required fields and computes text dimensions correctly. After drawing, it automatically calls `scrollToContent({ fitToContent: true })`.
 
-## 文字尺寸 & 容器自动适配
+## Text Sizing & Container Auto-fit
 
-1. **禁止手动设 text 的 `width`/`height`**——由 Excalidraw 自动计算
-2. **容器自动撑大**：text 元素加 `boundElements` 关联容器后，容器自动扩展到 `文字宽高 + 48px padding`，文字自动居中：
+1. **Never manually set `width`/`height` on a text element** -- Excalidraw computes these automatically
+2. **Containers auto-expand**: adding `boundElements` linking a text element to a container makes the container automatically expand to `text width/height + 48px padding`, with the text auto-centered:
    ```json
-   { "id": "text1", "type": "text", "text": "任意长度文字",
+   { "id": "text1", "type": "text", "text": "Text of any length",
      "boundElements": [{ "id": "box1", "type": "rectangle" }] }
    ```
-   - 容器写最小宽高即可，不够会自动扩展
-   - 支持 rectangle、ellipse、diamond 三种容器
-   - 容器位置由 `x`/`y` 决定，文字自动居中到容器内
+   - The container only needs a minimum width/height -- it expands automatically if too small
+   - Rectangle, ellipse, and diamond containers are all supported
+   - Container position is set by `x`/`y`; text is automatically centered within the container
 
-## 读取 / 清除场景
+## Reading / Clearing the Scene
 
 ```bash
-# 读取当前场景所有元素
+# Read all elements in the current scene
 curl -s http://localhost:19851/canvas/excalidraw/scene
 
-# 清除画布
+# Clear the canvas
 curl -s -X DELETE http://localhost:19851/canvas/excalidraw/scene
 ```
 
-## 视图引导（缩放 / 平移 / 聚焦 / 选中）
+## View Guidance (zoom / pan / focus / select)
 
-除了 draw/scene，还有一组引导式端点用来控制画布视图（不改变元素，只改变镜头）：
+Besides draw/scene, there's a set of guidance endpoints to control the canvas view (they don't change elements, only the "camera"):
 
 ```bash
-# 缩放到指定级别（1=100%）
+# Zoom to a specific level (1 = 100%)
 curl -s -X POST http://localhost:19851/canvas/excalidraw/zoom -H 'Content-Type: application/json' \
   -d '{"zoom":1.5}'
 
-# 平移到指定坐标（画布中心移到 x,y）
+# Pan to a specific coordinate (moves the canvas center to x,y)
 curl -s -X POST http://localhost:19851/canvas/excalidraw/pan -H 'Content-Type: application/json' \
   -d '{"x":200,"y":150}'
 
-# 选中指定元素（传元素 id 数组）
+# Select specific elements (pass an array of element ids)
 curl -s -X POST http://localhost:19851/canvas/excalidraw/select -H 'Content-Type: application/json' \
   -d '{"ids":["box1","arrow1"]}'
 
-# 清除选中
+# Clear selection
 curl -s -X POST http://localhost:19851/canvas/excalidraw/deselect
 
-# 聚焦指定元素（自动缩放+平移让这些元素填满视口）
+# Focus on specific elements (automatically zooms + pans so they fill the viewport)
 curl -s -X POST http://localhost:19851/canvas/excalidraw/focus -H 'Content-Type: application/json' \
   -d '{"ids":["box1","text1"]}'
 
-# 删除指定元素（按 id，不传 ids 则清空全部）
+# Delete specific elements (by id; if `ids` is omitted, clears everything)
 curl -s -X DELETE http://localhost:19851/canvas/excalidraw/elements -H 'Content-Type: application/json' \
   -d '{"ids":["box1"]}'
 ```
 
-这些端点适合在"一边说一边画"的讲解流程里引导用户注意力：画完后 `focus` 到刚画的元素，配合 TTS 解说。
+These endpoints are great for guiding the user's attention in a "talk while drawing" walkthrough: after drawing something, `focus` on the newly drawn element while narrating with TTS.
 
-## ⚠️ 大 payload 必须用 @file
+## Warning: Large Payloads Must Use @file
 
-curl 内联 JSON payload 超过 ~2000 字符时会被 shell 截断，请求静默失败（返回空字符串）。
+Inline curl JSON payloads over ~2000 characters get truncated by the shell, and the request silently fails (returns an empty string).
 
-**必须先 write_file 再 curl -d @file：**
+**You must write_file first, then curl -d @file:**
 
 ```python
 from hermes_tools import write_file, terminal
 write_file("/tmp/canvas-payload.json", json.dumps({"elements": elements}))
 result = terminal("curl -s -X POST http://localhost:19851/canvas/excalidraw/draw -H 'Content-Type: application/json' -d @/tmp/canvas-payload.json")
-# 务必检查返回值
+# Always check the response
 data = json.loads(result["output"])
-assert data.get("ok"), f"画图失败: {data}"
+assert data.get("ok"), f"Drawing failed: {data}"
 ```
 
-## 一边说一边画
+## Talk While Drawing
 
 ```bash
-# 先画
+# Draw first
 curl -s -X POST http://localhost:19851/canvas/excalidraw/draw -H 'Content-Type: application/json' -d '{"elements": [...]}'
 
-# 再说
+# Then speak
 python3 ~/.hermes/skills/creative/cloe-desktop-action/scripts/generate_tts.py \
-  --text "解说内容" --speak
+  --text "Narration content" --speak
 ```
 
-TTS 生成约 3 秒，可以先发 TTS 再画下一批。MOSI speak 播放期间其他 action 被 drop，但 draw 端点不受影响。
+TTS generation takes about 3 seconds, so you can send TTS first and draw the next batch while it plays. Other actions are dropped while MOSI speak is playing, but the draw endpoint is unaffected.
 
-## 视觉层级
+## Visual Layering
 
-层级从底到顶：
+Layers from bottom to top:
 
-1. `body` — `background: transparent`（Electron transparent 窗口）
-2. `#gif-container` — 角色 GIF（canvas 模式下 `pointer-events: none`）
-3. `#react-root` — z-index 5，React 覆盖层（黑色半透明背景）
-4. Excalidraw 画布 — 透明（只有绘制的图形可见）
+1. `body` -- `background: transparent` (Electron transparent window)
+2. `#gif-container` -- character GIF (`pointer-events: none` in canvas mode)
+3. `#react-root` -- z-index 5, React overlay (black, semi-transparent background)
+4. Excalidraw canvas -- transparent (only drawn shapes are visible)
 
-> ⚠️ curl payload 含 emoji 或换行符时，shell 会截断命令。用 `execute_code` 调 terminal 避免转义问题。
+> Warning: if the curl payload contains emoji or newlines, the shell will truncate the command. Use `execute_code` calling `terminal` to avoid escaping issues.
 
-## 图片元素
+## Image Elements
 
-画布支持显示图片。流程：先注册文件数据，再绘制 image 元素。
+The canvas supports displaying images. Process: register the file data first, then draw the image element.
 
-### 1. 注册文件
+### 1. Register the File
 
 ```bash
 curl -s -X POST http://localhost:19851/canvas/excalidraw/files \
@@ -153,14 +153,14 @@ curl -s -X POST http://localhost:19851/canvas/excalidraw/files \
   "files": {
     "photo-1": {
       "mimeType": "image/jpeg",
-      "data": "<base64 编码的图片数据>"
+      "data": "<base64-encoded image data>"
     }
   }
 }'
-# 返回 {"ok":true}
+# Returns {"ok":true}
 ```
 
-### 2. 绘制图片元素
+### 2. Draw the Image Element
 
 ```bash
 curl -s -X POST http://localhost:19851/canvas/excalidraw/draw \
@@ -183,24 +183,24 @@ curl -s -X POST http://localhost:19851/canvas/excalidraw/draw \
 }'
 ```
 
-### Python 示例（图片文件 → 画布）
+### Python Example (image file -> canvas)
 
 ```python
 import base64, json
 from hermes_tools import write_file, terminal
 
-# 读取并编码图片
+# Read and encode the image
 with open("/tmp/photo.jpg", "rb") as f:
     img_b64 = base64.b64encode(f.read()).decode()
 
 file_id = "my-photo-1"
 
-# 注册文件
+# Register the file
 files_payload = {"files": {file_id: {"mimeType": "image/jpeg", "data": img_b64}}}
 write_file("/tmp/canvas-files.json", json.dumps(files_payload))
 r = terminal(f"curl -s -X POST http://localhost:19851/canvas/excalidraw/files -H 'Content-Type: application/json' -d @/tmp/canvas-files.json")
 
-# 绘制图片元素（尺寸需要提前知道或给个默认值）
+# Draw the image element (dimensions must be known ahead of time, or given a default)
 img_elements = [{
     "id": "img-1", "type": "image",
     "x": 100, "y": 100, "width": 300, "height": 200,
@@ -212,27 +212,27 @@ write_file("/tmp/canvas-draw.json", json.dumps(draw_payload))
 terminal(f"curl -s -X POST http://localhost:19851/canvas/excalidraw/draw -H 'Content-Type: application/json' -d @/tmp/canvas-draw.json")
 ```
 
-> **注意**：图片尺寸不会自动适配，需要手动指定 width/height。
+> **Note**: image dimensions are not auto-fitted -- width/height must be specified manually.
 
-## 聊天消息注入
+## Chat Message Injection
 
-通过 HTTP API 向 Chat 面板（主窗口或独立聊天窗口）注入消息，支持纯文本和带图片的消息。
+Inject a message into the Chat panel (main window or standalone chat window) via the HTTP API, supporting both plain text and messages with images.
 
 ```bash
-# 纯文本消息
+# Plain text message
 curl -s -X POST http://localhost:19851/chat/message \
   -H 'Content-Type: application/json' -d '{
   "role": "assistant",
   "content": "Hello from Hermes!"
 }'
 
-# 带图片的消息
+# Message with an image
 curl -s -X POST http://localhost:19851/chat/message \
   -H 'Content-Type: application/json' -d '{
   "role": "assistant",
-  "content": "看看这张图",
-  "image": "<base64 编码的图片>"
+  "content": "Check out this image",
+  "image": "<base64-encoded image>"
 }'
 ```
 
-消息会同时发送到主窗口的 ChatPanel 和独立的聊天窗口（如果打开的话）。图片支持点击放大查看。
+The message is sent to both the ChatPanel in the main window and the standalone chat window (if open). Images support click-to-enlarge.

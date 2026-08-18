@@ -1,5 +1,5 @@
 // ==================== Cloe Settings — Shortcuts Tab ====================
-// (API_CONFIG_BASE 已在 preferences.js 中定义)
+// (API_CONFIG_BASE is already defined in preferences.js)
 
 // ── Shortcut definition list ──
 // Each entry: { id, lsKey, labelKey, descKey, emptyKey, hintKey, clearKey }

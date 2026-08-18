@@ -1,9 +1,9 @@
 #!/bin/bash
-# Cloe Desktop — 一键打包 DMG
-# 用法: ./scripts/pack.sh [--dir] [--install]
-#   默认打包 DMG
-#   --dir     只打包目录（调试用，快很多）
-#   --install 打包后部署到 /Applications 并启动（自动检测架构目录）
+# Cloe Desktop — One-click DMG packaging
+# Usage: ./scripts/pack.sh [--dir] [--install]
+#   Default: package DMG
+#   --dir     Package directory only (for debugging, much faster)
+#   --install Deploy to /Applications and launch after packaging (auto-detects arch dir)
 
 set -e
 cd "$(dirname "$0")/.."
@@ -13,50 +13,50 @@ for arg in "$@"; do
   [[ "$arg" == "--install" ]] && INSTALL=true
 done
 
-# ── 代码签名 + 公证配置 ─────────────────────────────────
-# 从 .codesign.env 读取凭证（该文件已 gitignore，不会泄露）
+# ── Code signing + notarization config ─────────────────────────────────
+# Read credentials from .codesign.env (gitignored, won't leak)
 if [[ -f .codesign.env ]]; then
   source .codesign.env
 fi
 
-# 导出给 electron-builder 使用
+# Export for electron-builder to use
 export CSC_NAME="${CSC_NAME:-Chengdu Jishang Technology Co., Ltd (3Y2339R24V)}"
 export APPLE_ID
 export APPLE_APP_SPECIFIC_PASSWORD
 export APPLE_TEAM_ID
 
-# 公证需要这些环境变量（不设置则跳过公证，仅签名）
+# Notarization needs these env vars (skip notarization, sign only, if unset)
 # APPLE_ID / APPLE_APP_SPECIFIC_PASSWORD / APPLE_TEAM_ID
 if [[ -n "${APPLE_ID}" && -n "${APPLE_APP_SPECIFIC_PASSWORD}" ]]; then
-  echo "=== Cloe Desktop 打包（签名 + 公证）==="
+  echo "=== Cloe Desktop packaging (sign + notarize) ==="
 else
-  echo "=== Cloe Desktop 打包（仅签名，无公证）==="
-  echo "  提示: 创建 .codesign.env 设置 APPLE_ID 和 APPLE_APP_SPECIFIC_PASSWORD 启用公证"
+  echo "=== Cloe Desktop packaging (sign only, no notarization) ==="
+  echo "  Tip: create .codesign.env and set APPLE_ID and APPLE_APP_SPECIFIC_PASSWORD to enable notarization"
 fi
 
-# [0] 清理旧产物，确保全量重建
-echo "[0/3] 清理旧构建产物..."
+# [0] Clean old artifacts, ensure a full rebuild
+echo "[0/3] Cleaning old build artifacts..."
 rm -rf dist release
 
-# [1] vite build (publicDir: false, 不拷贝 public/)
+# [1] vite build (publicDir: false, does not copy public/)
 echo "[1/3] vite build..."
 node ./node_modules/vite/bin/vite.js build
 
-# [2] 只拷贝运行时需要的文件（排除 _work_* 中间产物）
-echo "[2/3] 拷贝静态资源..."
+# [2] Copy only files needed at runtime (exclude _work_* intermediate artifacts)
+echo "[2/3] Copying static assets..."
 mkdir -p dist/gifs dist/audio dist/references dist/manager
 
-# GIFs: 拷贝顶层成品 .gif 文件（排除 _raw.gif）+ 递归拷贝子目录
+# GIFs: copy top-level finished .gif files (exclude _raw.gif) + recursively copy subdirectories
 for gif in public/gifs/*.gif; do
   [[ "$(basename "$gif")" == *_raw.gif ]] && continue
   cp -f "$gif" dist/gifs/
 done
 for subdir in public/gifs/*/; do
   dirname=$(basename "$subdir")
-  # 跳过 _work_* 中间产物目录
+  # Skip _work_* intermediate artifact directories
   [[ "$dirname" == _work_* ]] && continue
   mkdir -p "dist/gifs/$dirname"
-  # 只拷贝成品 .gif 文件（跳过 _raw.gif 和 _work_* 子目录）
+  # Copy only finished .gif files (skip _raw.gif and _work_* subdirectories)
   for gif in "$subdir"*.gif; do
     [[ "$(basename "$gif")" == *_raw.gif ]] && continue
     cp -f "$gif" "dist/gifs/$dirname/" 2>/dev/null || true
@@ -72,19 +72,19 @@ if [[ -f build/Cloe.iconset/icon_32x32.png ]]; then
     cp -f build/Cloe.iconset/icon_32x32.png dist/tray_icon.png
 fi
 
-# [2.5] 校验关键文件已包含最新代码
-echo "[2.5/3] 校验打包文件..."
+# [2.5] Verify key files include the latest code
+echo "[2.5/3] Verifying packaged files..."
 CHECKS_OK=true
 for f in dist/manager/actions.js dist/manager/manager.js dist/manager/index.html dist/manager/actions.css; do
     if [[ ! -f "$f" ]]; then
-        echo "  ✗ 缺失: $f"
+        echo "  ✗ Missing: $f"
         CHECKS_OK=false
     fi
 done
 if $CHECKS_OK; then
-    echo "  ✓ 关键文件校验通过"
+    echo "  ✓ Key file verification passed"
 else
-    echo "  ✗ 校验失败，请检查"
+    echo "  ✗ Verification failed, please check"
     exit 1
 fi
 
@@ -109,9 +109,9 @@ if [[ "$1" == "--dir" ]]; then
     ELECTRON_MIRROR="${ELECTRON_MIRROR:-https://npmmirror.com/mirrors/electron/}" \
       ./node_modules/.bin/electron-builder --mac --dir --config.npmRebuild=false
     echo ""
-    echo "=== 完成! ==="
+    echo "=== Done! ==="
     echo "App: release/mac-arm64/Cloe.app"
-    echo "运行: open release/mac-arm64/Cloe.app"
+    echo "Run: open release/mac-arm64/Cloe.app"
 else
     echo "[3/3] electron-builder --mac (universal DMG)..."
     pkill -9 hdiutil 2>/dev/null || true
@@ -119,7 +119,7 @@ else
     ELECTRON_MIRROR="${ELECTRON_MIRROR:-https://npmmirror.com/mirrors/electron/}" \
       ./node_modules/.bin/electron-builder --mac --config.npmRebuild=false
     echo ""
-    echo "=== 完成! ==="
+    echo "=== Done! ==="
     DMG=$(ls -t release/*.dmg 2>/dev/null | head -1)
     if [[ -n "$DMG" ]]; then
         SIZE=$(du -h "$DMG" | cut -f1)
@@ -128,7 +128,7 @@ else
 fi
 
 # [3.5] Verify pty.node architectures in output
-echo "[3.5/3] 校验 pty.node..."
+echo "[3.5/3] Verifying pty.node..."
 for dir in release/mac-universal release/mac-arm64 release/mac; do
     PTY=$(find "$dir/Cloe.app" -name "pty.node" 2>/dev/null | head -1)
     if [[ -n "$PTY" ]]; then
@@ -140,7 +140,7 @@ done
 # ── Install step ──────────────────────────────────────────
 if $INSTALL; then
     echo ""
-    echo "=== 部署到 /Applications ==="
+    echo "=== Deploying to /Applications ==="
     # Find the built app (dir mode puts it in mac-arm64 or mac, DMG mode in mac-universal)
     APP_SRC=""
     for dir in release/mac-arm64 release/mac release/mac-universal; do
@@ -150,7 +150,7 @@ if $INSTALL; then
         fi
     done
     if [[ -z "$APP_SRC" ]]; then
-        echo "  ✗ 未找到 Cloe.app，跳过部署"
+        echo "  ✗ Cloe.app not found, skipping deployment"
         exit 0
     fi
 
@@ -170,9 +170,9 @@ if $INSTALL; then
         SRC_MD5=$(md5 -q "$SOURCE_ASAR")
         DST_MD5=$(md5 -q "$TARGET_ASAR")
         if [[ "$SRC_MD5" == "$DST_MD5" ]]; then
-            echo "  ✓ asar 校验通过 ($SRC_MD5)"
+            echo "  ✓ asar verification passed ($SRC_MD5)"
         else
-            echo "  ✗ asar MD5 不匹配! 源=$SRC_MD5 目标=$DST_MD5"
+            echo "  ✗ asar MD5 mismatch! source=$SRC_MD5 target=$DST_MD5"
             exit 1
         fi
     fi
@@ -184,5 +184,5 @@ if $INSTALL; then
     rm -rf ~/Library/Application\ Support/cloe-desktop/DawnCache 2>/dev/null || true
 
     open /Applications/Cloe.app
-    echo "  ✓ 已启动 /Applications/Cloe.app"
+    echo "  ✓ Launched /Applications/Cloe.app"
 fi

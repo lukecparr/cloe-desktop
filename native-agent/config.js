@@ -1,28 +1,28 @@
 'use strict';
 
 /**
- * Native Agent Config — Provider 配置管理
+ * Native Agent Config — provider configuration management
  *
- * 配置文件: ~/.cloe/native-agent.json
+ * Config file: ~/.cloe/native-agent.json
  *
- * 结构:
+ * Structure:
  * {
- *   "enabled": false,           // 总开关
- *   "provider": "zhipu",       // 当前 LLM provider
- *   "model": "glm-4-flash",    // 当前模型 ID
- *   "soulPath": "",            // 灵魂文件路径
- *   "providers": {             // LLM Provider 配置
+ *   "enabled": false,           // master switch
+ *   "provider": "zhipu",       // current LLM provider
+ *   "model": "glm-4-flash",    // current model ID
+ *   "soulPath": "",            // soul file path
+ *   "providers": {             // LLM provider config
  *     "zhipu": { "baseURL": "...", "apiKey": "...", "models": [...] },
  *     ...
  *   },
- *   "webSearch": {             // Web Search 配置
- *     "provider": "zhipu_mcp", // 当前搜索引擎 provider
+ *   "webSearch": {             // web search config
+ *     "provider": "zhipu_mcp", // current search engine provider
  *     "providers": {
  *       "zhipu_mcp": { "apiKey": "...", "searchURL": "...", "readerURL": "..." },
  *       "tavily": { "apiKey": "..." },
  *       "bing": { "apiKey": "...", "endpoint": "..." },
  *       "serpapi": { "apiKey": "...", "engine": "google" },
- *       "ddg": {}              // 免费，无需配置
+ *       "ddg": {}              // free, no config needed
  *     }
  *   }
  * }
@@ -38,10 +38,10 @@ const { CONFIG_DIR, CONFIG_FILE } = require('./paths');
  * OpenAI-compatible /v1/models endpoints do NOT expose context length,
  * so we maintain this table ourselves. Users can override via the UI.
  *
- * Values sourced from official docs (智谱 / DeepSeek / OpenAI / Anthropic).
+ * Values sourced from official docs (Zhipu / DeepSeek / OpenAI / Anthropic).
  */
 const MODEL_CONTEXT_DEFAULTS = {
-  // ── 智谱 GLM ──
+  // ── Zhipu GLM ──
   'glm-5.2': 1000000,
   'glm-5.2[1m]': 1000000,
   'glm-4.6': 200000,
@@ -66,7 +66,7 @@ const MODEL_CONTEXT_DEFAULTS = {
   'o3': 200000,
   'o3-mini': 200000,
   'o4-mini': 200000,
-  // ── Anthropic (via兼容层) ──
+  // ── Anthropic (via compatibility layer) ──
   'claude-sonnet-4': 200000,
   'claude-opus-4': 200000,
   'claude-3-7-sonnet': 200000,

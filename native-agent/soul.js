@@ -1,16 +1,16 @@
 'use strict';
 
 /**
- * Native Agent Soul — 灵魂文件加载
+ * Native Agent Soul — soul file loading
  *
- * 从 soul.md 加载角色设定，注入到 system prompt 中。
+ * Loads the persona definition from soul.md and injects it into the system prompt.
  *
- * 路径优先级:
- *   1. config 中用户指定的 soulPath
- *   2. ~/.cloe/soul.md（自有，如果存在）
- *   3. ~/.hermes/soul.md（fallback）
+ * Path priority:
+ *   1. User-specified soulPath in config
+ *   2. ~/.cloe/soul.md (own, if it exists)
+ *   3. ~/.hermes/soul.md (fallback)
  *
- * 支持热重载: 文件变化时自动重新加载。
+ * Supports hot reload: automatically reloads when the file changes.
  */
 
 const fs = require('fs');

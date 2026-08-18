@@ -65,7 +65,7 @@
   },
   "i18n": {
     "switchToEn": "EN",
-    "switchToZh": "中文"
+    "switchToZh": "Chinese"
   },
   "createSet": {
     "title": "New Action Set",
@@ -173,7 +173,7 @@
     "appearance": "Appearance",
     "language": "Language",
     "languageDesc": "Choose the display language",
-    "langZh": "简体中文",
+    "langZh": "Chinese (Simplified)",
     "langEn": "English",
     "apiKeyToggle": "Toggle visibility",
     "apiKeyPlaceholder": "sk-...",

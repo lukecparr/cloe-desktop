@@ -1,14 +1,14 @@
 'use strict';
 
 /**
- * Native Agent Skills — Skill 发现和按需加载
+ * Native Agent Skills — skill discovery and on-demand loading
  *
- * 从 skills 目录发现所有 SKILL.md 文件，
- * 构建 skill 索引 (name + description) 注入 system prompt。
+ * Discovers all SKILL.md files under the skills directory,
+ * builds a skill index (name + description) to inject into the system prompt.
  *
- * Skill body 在 LLM 请求时按需注入 (通过 tool call `load_skill`)。
+ * The skill body is injected on demand during LLM requests (via the `load_skill` tool call).
  *
- * 目录优先级: ~/.cloe/skills/ → ~/.hermes/skills/ (fallback)
+ * Directory priority: ~/.cloe/skills/ → ~/.hermes/skills/ (fallback)
  */
 
 const fs = require('fs');

@@ -1,132 +1,132 @@
-# 提醒系统 API
+# Reminder System API
 
-通过 Bridge API 创建和管理定时提醒（喝水、番茄钟、自定义周期/倒计时）。
+Create and manage timed reminders (drink water, pomodoro timer, custom interval/countdown) through the Bridge API.
 
-## 数据模型
+## Data Model
 
 ```json
 {
-  "id": "喝水",
-  "name": "喝水",
-  "mode": "interval",          // interval=周期, countdown=番茄钟
-  "duration": 1800,            // 秒数
+  "id": "drink-water",
+  "name": "Drink water",
+  "mode": "interval",          // interval=recurring, countdown=pomodoro
+  "duration": 1800,            // seconds
   "enabled": true,
-  "auto_start": true,          // dismiss后自动开始下一轮
-  "tts": true,                 // 触发时播放语音
-  "action": "wave",            // 触发时角色动作（空字符串=无动作）
-  "break_duration": 0,         // countdown休息时长（秒）
-  "total_rounds": 0,           // countdown总轮数（0=无限）
+  "auto_start": true,          // automatically start the next round after dismiss
+  "tts": true,                 // play voice when triggered
+  "action": "wave",            // character action when triggered (empty string = no action)
+  "break_duration": 0,         // countdown break duration (seconds)
+  "total_rounds": 0,           // countdown total rounds (0 = unlimited)
   "status": "running",         // idle/running/triggered/paused/completed
   "round": 0,
-  "phase": "work",             // work/break（countdown模式）
+  "phase": "work",             // work/break (countdown mode)
   "trigger_at": "2026-07-14T12:00:00.000Z"
 }
 ```
 
-## API 端点
+## API Endpoints
 
-### 列出所有提醒
+### List All Reminders
 
 ```bash
 curl -s http://localhost:19851/reminders
 ```
 
-### 创建提醒
+### Create a Reminder
 
 ```bash
-# 周期提醒：每30分钟喝水，触发时挥手+语音
+# Recurring reminder: drink water every 30 minutes, wave + voice when triggered
 curl -s -X POST http://localhost:19851/reminders -H 'Content-Type: application/json' \
-  -d '{"name":"喝水","mode":"interval","duration":1800,"action":"wave"}'
+  -d '{"name":"Drink water","mode":"interval","duration":1800,"action":"wave"}'
 
-# 番茄钟：25分钟工作+5分钟休息，4轮，触发时鼓掌+语音
+# Pomodoro: 25 min work + 5 min break, 4 rounds, clap + voice when triggered
 curl -s -X POST http://localhost:19851/reminders -H 'Content-Type: application/json' \
-  -d '{"name":"专注","mode":"countdown","duration":1500,"break_duration":300,"total_rounds":4,"action":"clap","auto_start":true}'
+  -d '{"name":"Focus","mode":"countdown","duration":1500,"break_duration":300,"total_rounds":4,"action":"clap","auto_start":true}'
 
-# 倒计时：15分钟后一次性提醒
+# Countdown: one-time reminder in 15 minutes
 curl -s -X POST http://localhost:19851/reminders -H 'Content-Type: application/json' \
-  -d '{"name":"该开会了","mode":"countdown","duration":900,"auto_start":false}'
+  -d '{"name":"Meeting time","mode":"countdown","duration":900,"auto_start":false}'
 ```
 
-### 更新提醒（改时间并重新计时）
+### Update a Reminder (change timing and restart)
 
 ```bash
-# 把"喝水"改成每15分钟，start:true 立即重新开始计时
+# Change "Drink water" to every 15 minutes, start:true restarts the timer immediately
 curl -s -X POST http://localhost:19851/reminders -H 'Content-Type: application/json' \
-  -d '{"id":"喝水","name":"喝水","mode":"interval","duration":900,"start":true,"action":"wave"}'
+  -d '{"id":"drink-water","name":"Drink water","mode":"interval","duration":900,"start":true,"action":"wave"}'
 ```
 
-### 控制提醒状态
+### Control Reminder State
 
 ```bash
-# 清除当前触发（auto_start=true则开始下一轮，false则变idle）
-curl -s -X POST http://localhost:19851/reminders/喝水/dismiss
+# Clear the current trigger (starts the next round if auto_start=true, otherwise goes idle)
+curl -s -X POST http://localhost:19851/reminders/drink-water/dismiss
 
-# 停止并禁用
-curl -s -X POST http://localhost:19851/reminders/喝水/stop
+# Stop and disable
+curl -s -X POST http://localhost:19851/reminders/drink-water/stop
 
-# 启用/禁用切换
-curl -s -X POST http://localhost:19851/reminders/喝水/toggle
+# Toggle enabled/disabled
+curl -s -X POST http://localhost:19851/reminders/drink-water/toggle
 
-# 暂停（记录剩余时间）
-curl -s -X POST http://localhost:19851/reminders/喝水/pause
+# Pause (records the remaining time)
+curl -s -X POST http://localhost:19851/reminders/drink-water/pause
 
-# 恢复（用剩余时间继续）
-curl -s -X POST http://localhost:19851/reminders/喝水/resume
+# Resume (continues with the remaining time)
+curl -s -X POST http://localhost:19851/reminders/drink-water/resume
 ```
 
-### 删除提醒
+### Delete a Reminder
 
 ```bash
-curl -s -X DELETE http://localhost:19851/reminders/喝水
+curl -s -X DELETE http://localhost:19851/reminders/drink-water
 ```
 
-## 全局控制
+## Global Controls
 
-### 全局静音
+### Global Mute
 
-开关全局语音静音。开启后所有提醒和 Agent Session 的 TTS 都不会播放。通过快捷键 toggle 后桌面会弹出提示。
+Toggles global voice mute. When on, TTS for all reminders and Agent Sessions is suppressed. Toggling via the keyboard shortcut shows a desktop notification.
 
 ```bash
-# 查看静音状态
+# Check mute state
 curl -s http://localhost:19851/mute-state
 # {"muted": false}
 
-# 切换静音
+# Toggle mute
 curl -s -X POST http://localhost:19851/toggle-mute
 # {"muted": true}
 ```
 
-### 全局暂停 / 恢复提醒
+### Global Pause / Resume Reminders
 
-暂停所有"运行中"的提醒（不影响已停止的）。再次调用恢复所有被全局暂停的提醒。
+Pauses all "running" reminders (does not affect already-stopped ones). Calling it again resumes all reminders that were globally paused.
 
 ```bash
-# 查看暂停状态
+# Check pause state
 curl -s http://localhost:19851/global-pause-state
 # {"paused": false}
 
-# 切换暂停/恢复
+# Toggle pause/resume
 curl -s -X POST http://localhost:19851/toggle-global-pause
-# {"paused": true, "count": 3}  -- 暂停了3个提醒
+# {"paused": true, "count": 3}  -- paused 3 reminders
 ```
 
-> 注意：全局暂停只暂停 status=running 的提醒，手动暂停的和 stopped 的不受影响。恢复时只恢复被全局暂停的那批。
+> Note: global pause only pauses reminders with status=running -- manually paused or stopped reminders are unaffected. Resuming only resumes the batch that was globally paused.
 
-## 触发效果
+## Trigger Effects
 
-提醒到时间时：
-1. 桌面弹出毛玻璃卡片（角色正下方），显示提醒名称+操作按钮
-2. 角色播放 `action` 指定的动作 GIF
-3. 如果 `tts=true`，用 MOSI TTS 生成语音并播放：
-   - 工作 phase：`{name}时间到啦`
-   - 休息 phase：`休息时间到啦，放松一下吧`
-   - 全部完成：`{name}全部完成啦，辛苦了`
+When a reminder fires:
+1. A frosted-glass card pops up on the desktop (directly below the character), showing the reminder name and action buttons
+2. The character plays the action GIF specified by `action`
+3. If `tts=true`, voice is generated and played via MOSI TTS:
+   - Work phase: `"Time for {name}"`
+   - Break phase: `"Break time, go relax for a bit"`
+   - All rounds completed: `"{name} all done, great work"`
 
-## 注意事项
+## Notes
 
-- `duration` 单位是**秒**（不是分钟）
-- `id` 不传时自动从 name 生成（中文会保留）
-- interval 模式 `auto_start` 默认 true，countdown 默认 false
-- 番茄钟 dismiss 后自动切换 work↔break 相位，`total_rounds` 完成后自动标记 completed
-- 提醒数据持久化在 `~/.cloe/reminders.json`，应用重启后自动恢复
-- 中文提醒名在 URL 里需要 `encodeURIComponent` 编码
+- `duration` is in **seconds** (not minutes)
+- If `id` is not provided, it's auto-generated from `name` (non-ASCII characters are preserved)
+- For interval mode, `auto_start` defaults to true; for countdown, it defaults to false
+- Dismissing a pomodoro reminder automatically toggles the work<->break phase; once `total_rounds` is reached, it's automatically marked completed
+- Reminder data is persisted in `~/.cloe/reminders.json` and automatically restored after an app restart
+- Reminder names containing special characters need `encodeURIComponent` encoding in the URL

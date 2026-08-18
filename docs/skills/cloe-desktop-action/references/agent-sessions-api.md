@@ -123,8 +123,8 @@ curl -s -X DELETE http://localhost:19851/agent-sessions/SESSION_ID
 
 ## TTS Notifications
 
-- **Turn complete**: Speaks `"{displayName}完成了一轮"` (turn completed)
-- **Needs decision**: Speaks `"{displayName}需要你决策"` (needs your decision)
+- **Turn complete**: Speaks `"{displayName} finished a turn"`
+- **Needs decision**: Speaks `"{displayName} needs your decision"`
 - `displayName` = session title if set, otherwise `source_label`
 - Falls back to pre-recorded audio if dynamic TTS fails
 - Honors the global mute toggle — no speech when muted

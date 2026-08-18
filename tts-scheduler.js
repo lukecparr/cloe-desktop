@@ -5,7 +5,7 @@
  * Instead of immediately playing TTS when a reminder triggers or a session turn ends,
  * it schedules the TTS after a configurable delay (default 3s).
  *
- * If the user acknowledges (clicks "知道了" / dismisses the card / interacts with the session)
+ * If the user acknowledges (clicks "Dismiss" / dismisses the card / interacts with the session)
  * within the delay window, the TTS is cancelled — the user obviously saw it.
  *
  * Config persists to ~/.cloe/tts-scheduler.json:
@@ -59,7 +59,7 @@ function updateConfig(updates) {
 
 /**
  * Map<sourceKey, { timer, text, ttsFn, source, id }>
- * - sourceKey: unique key like "reminder:喝水" or "agent:zcode-12345:turn-end"
+ * - sourceKey: unique key like "reminder:drink-water" or "agent:zcode-12345:turn-end"
  * - timer: setTimeout handle
  * - text: the TTS message (for logging)
  * - ttsFn: function that actually generates TTS (generateReminderTTS / generateAgentTTS)
@@ -80,7 +80,7 @@ function broadcast(msg) {
 /**
  * Schedule a deferred TTS. If conditional_tts is disabled, fires immediately.
  *
- * @param {string} sourceKey - unique key (e.g. "reminder:喝水", "agent:sessionId:turn-end")
+ * @param {string} sourceKey - unique key (e.g. "reminder:drink-water", "agent:sessionId:turn-end")
  * @param {string} text - TTS message text (for logging/preview)
  * @param {Function} ttsFn - callback that generates the actual TTS (e.g. generateReminderTTS)
  * @param {object} opts - { source: 'reminder'|'agent', id: string }

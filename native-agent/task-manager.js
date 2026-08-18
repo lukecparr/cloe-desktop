@@ -1,18 +1,20 @@
 'use strict';
 
 /**
- * Task Manager — 子 Agent 任务管理系统
+ * Task Manager — sub-agent task management system
  *
- * 主 Agent 通过 spawn_agent 工具创建子 Agent 任务。
- * 子 Agent 在后台独立运行，完成后通过 followUp 机制通知主 Agent。
+ * The main agent creates sub-agent tasks via the spawn_agent tool.
+ * Sub-agents run independently in the background and notify the main agent
+ * via the followUp mechanism when done.
  *
- * 两种模式:
- *   - sync:  主 Agent 阻塞等待结果（适合短任务）
- *   - async: 主 Agent 继续工作，完成后自动 followUp 通知（适合长任务）
+ * Two modes:
+ *   - sync:  the main agent blocks waiting for the result (good for short tasks)
+ *   - async: the main agent keeps working, and gets an automatic followUp
+ *            notification when done (good for long tasks)
  *
- * 生命周期:
+ * Lifecycle:
  *   spawn() → running → done/failed/timeout
- *   完成后自动清理（默认 1 小时后回收）
+ *   automatically cleaned up when done (reclaimed after 1 hour by default)
  */
 
 const { AgentSession } = require('./agent');
@@ -20,15 +22,15 @@ const { AgentSession } = require('./agent');
 let taskCounter = 0;
 const tasks = new Map(); // taskId → taskInfo
 
-// followUp 触发器（由 native-proxy 注册）
+// followUp trigger (registered by native-proxy)
 let _followUpTrigger = null;
 
-// 任务超时（毫秒）
-const DEFAULT_TIMEOUT = 10 * 60 * 1000; // 10 分钟
+// Task timeout (ms)
+const DEFAULT_TIMEOUT = 10 * 60 * 1000; // 10 minutes
 
 /**
- * 注册 followUp 触发器。
- * 当子任务完成时，调用此函数通知主 session。
+ * Register the followUp trigger.
+ * Called to notify the main session when a sub-task completes.
  * @param {function} fn - (cloeSessionId, taskId, task, result) => void
  */
 function setFollowUpTrigger(fn) {
@@ -36,13 +38,13 @@ function setFollowUpTrigger(fn) {
 }
 
 /**
- * 创建并启动一个子 Agent 任务。
+ * Create and start a sub-agent task.
  *
- * @param {string} task - 任务描述
+ * @param {string} task - task description
  * @param {object} options
- * @param {string} options.cloeSessionId - 父 session ID（用于 followUp）
+ * @param {string} options.cloeSessionId - parent session ID (for followUp)
  * @param {string} options.mode - "sync" | "async"
- * @param {number} options.timeout - 超时毫秒（默认 10 分钟）
+ * @param {number} options.timeout - timeout in ms (default 10 minutes)
  * @returns {Promise<string>} taskId
  */
 async function spawn(task, options = {}) {
@@ -65,22 +67,22 @@ async function spawn(task, options = {}) {
 
   tasks.set(taskId, taskInfo);
 
-  // 创建子 Agent（sub-agent 模式：无灵魂文件、无 spawn 工具、无历史）
+  // Create a sub-agent (sub-agent mode: no soul file, no spawn tool, no history)
   const subSession = new AgentSession(`sub-${taskId}`, {
     subAgent: true,
     taskPrompt: task,
   });
   taskInfo.subSession = subSession;
 
-  // 超时定时器
+  // Timeout timer
   const timeoutTimer = setTimeout(() => {
     if (taskInfo.status === 'running') {
       try { subSession.abort(); } catch {}
-      _finishTask(taskInfo, 'timeout', `任务超时（${Math.floor(timeout / 1000)}秒），已终止`);
+      _finishTask(taskInfo, 'timeout', `Task timed out (${Math.floor(timeout / 1000)}s), aborted`);
     }
   }, timeout);
 
-  // 后台运行子 Agent
+  // Run the sub-agent in the background
   subSession.addUserMessage(task);
 
   subSession.run({
@@ -93,21 +95,21 @@ async function spawn(task, options = {}) {
     },
     onError: (err) => {
       clearTimeout(timeoutTimer);
-      _finishTask(taskInfo, 'failed', `子 Agent 出错: ${err}`);
+      _finishTask(taskInfo, 'failed', `Sub-agent error: ${err}`);
     },
   }, undefined).catch((e) => {
     clearTimeout(timeoutTimer);
-    _finishTask(taskInfo, 'failed', `子 Agent 异常: ${e.message}`);
+    _finishTask(taskInfo, 'failed', `Sub-agent exception: ${e.message}`);
   });
 
   return taskId;
 }
 
 /**
- * 内部：完成任务并触发 followUp（仅 async 模式）。
+ * Internal: finish a task and trigger followUp (async mode only).
  */
 function _finishTask(taskInfo, status, result) {
-  if (taskInfo.status !== 'running') return; // 防止重复完成
+  if (taskInfo.status !== 'running') return; // prevent duplicate completion
 
   taskInfo.status = status;
   taskInfo.result = result;
@@ -115,19 +117,19 @@ function _finishTask(taskInfo, status, result) {
 
   console.log(`[TaskManager] Task ${taskInfo.id} ${status} (${Math.floor((taskInfo.completedAt - taskInfo.startedAt) / 1000)}s)`);
 
-  // sync 模式不触发 followUp（结果通过 waitForCompletion 直接返回）
+  // sync mode does not trigger followUp (result is returned directly via waitForCompletion)
   if (taskInfo.mode === 'sync') return;
 
-  // async 模式：触发 followUp 通知主 session
+  // async mode: trigger followUp to notify the main session
   if (taskInfo.cloeSessionId && _followUpTrigger) {
     const task = taskInfo.task;
     const summary = typeof result === 'string' && result.length > 6000
-      ? result.slice(0, 6000) + '\n\n[结果过长，已截断。完整结果可通过 check_task 查看]'
+      ? result.slice(0, 6000) + '\n\n[Result truncated because it was too long. View the full result via check_task]'
       : result;
 
     const notification = status === 'done'
-      ? `[系统通知] 后台任务 ${taskInfo.id} 已完成。\n任务: ${task}\n\n结果:\n${summary}`
-      : `[系统通知] 后台任务 ${taskInfo.id} ${status === 'timeout' ? '超时' : '失败'}。\n任务: ${task}\n${summary}`;
+      ? `[System notification] Background task ${taskInfo.id} completed.\nTask: ${task}\n\nResult:\n${summary}`
+      : `[System notification] Background task ${taskInfo.id} ${status === 'timeout' ? 'timed out' : 'failed'}.\nTask: ${task}\n${summary}`;
 
     try {
       _followUpTrigger(taskInfo.cloeSessionId, taskInfo.id, notification);
@@ -138,7 +140,7 @@ function _finishTask(taskInfo, status, result) {
 }
 
 /**
- * 查询任务状态。
+ * Query a task's status.
  * @param {string} taskId
  * @returns {object} { status, result, error, toolsUsed, elapsedSeconds, task }
  */
@@ -169,10 +171,10 @@ function check(taskId) {
 }
 
 /**
- * 同步等待任务完成（用于 sync 模式）。
+ * Synchronously wait for a task to complete (used in sync mode).
  * @param {string} taskId
- * @param {number} timeout - 最大等待毫秒
- * @returns {Promise<string>} 任务结果文本
+ * @param {number} timeout - max wait time in ms
+ * @returns {Promise<string>} task result text
  */
 function waitForCompletion(taskId, timeout = 300000) {
   return new Promise((resolve) => {
@@ -192,7 +194,7 @@ function waitForCompletion(taskId, timeout = 300000) {
 }
 
 /**
- * 列出所有任务。
+ * List all tasks.
  */
 function list() {
   return Array.from(tasks.values()).map((t) => ({
@@ -206,7 +208,7 @@ function list() {
 }
 
 /**
- * 清理旧的已完成任务（定期调用）。
+ * Clean up old completed tasks (called periodically).
  */
 function cleanup(maxAgeMs = 3600000) {
   const now = Date.now();
@@ -217,7 +219,7 @@ function cleanup(maxAgeMs = 3600000) {
   }
 }
 
-// 定期清理（每小时）
+// Periodic cleanup (every hour)
 setInterval(() => cleanup(), 3600000);
 
 module.exports = {

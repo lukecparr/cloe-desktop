@@ -1,5 +1,5 @@
 /**
- * AgentSessionModal — Agent Session 列表模态框
+ * AgentSessionModal — Agent Session list modal
  */
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
@@ -8,9 +8,9 @@ import './agent-session-modal.css';
 const API_BASE = 'http://127.0.0.1:19851';
 
 const STATUS_CONFIG = {
-  working:        { label: '运行中',   color: '#4d9eff', pulse: true },
-  turn_complete:  { label: '已就绪',   color: '#3dd68c', pulse: false },
-  needs_decision: { label: '待确认',   color: '#f5a623', pulse: true },
+  working:        { label: 'Running',   color: '#4d9eff', pulse: true },
+  turn_complete:  { label: 'Ready',   color: '#3dd68c', pulse: false },
+  needs_decision: { label: 'Waiting',   color: '#f5a623', pulse: true },
 };
 
 function formatTime(iso) {
@@ -73,11 +73,11 @@ function SessionCard({ session, onSetTitle, onCancel }) {
         )}
         <div className="as-meta">
           <span>{session.source_label}</span>
-          {session.turn_count > 0 && <span>· {session.turn_count}轮</span>}
+          {session.turn_count > 0 && <span>· {session.turn_count} turns</span>}
           <span>· {formatTime(session.created_at)}</span>
         </div>
       </div>
-      <button className="as-cancel-btn" onClick={() => onCancel(session.id)} title="取消监听">
+      <button className="as-cancel-btn" onClick={() => onCancel(session.id)} title="Cancel">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
           <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
         </svg>
@@ -115,7 +115,7 @@ export default function AgentSessionModal({ visible, sessions, onSetTitle, onCan
               <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
               </svg>
-              <p>当前没有活跃的 Agent Session</p>
+              <p>No active Agent Sessions</p>
             </div>
           ) : (
             sessions.map((s) => (

@@ -66,8 +66,8 @@ function localizedField(set, field) {
 }
 
 function specialLabel(special) {
-  if (special === '工作模式' || special === 'Work Mode') return I18n.t('tag.specialWork');
-  if (special === '语音' || special === 'Voice') return I18n.t('tag.specialSpeak');
+  if (special === 'Work Mode') return I18n.t('tag.specialWork');
+  if (special === 'Voice') return I18n.t('tag.specialSpeak');
   return special;
 }
 

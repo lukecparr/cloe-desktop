@@ -1,10 +1,10 @@
-# 天气系统 API
+# Weather System API
 
-通过 Bridge API 配置和预览天气特效。Cloe Desktop 会定期拉取真实天气数据，在角色背景渲染对应的天气动画（雨、雪、雷暴、雾等）。
+Configure and preview weather effects through the Bridge API. Cloe Desktop periodically fetches real weather data and renders a matching weather animation behind the character (rain, snow, thunderstorm, fog, etc.).
 
-## 数据模型
+## Data Model
 
-### 配置（`/weather/config`）
+### Config (`/weather/config`)
 
 ```json
 {
@@ -17,25 +17,25 @@
 }
 ```
 
-| 字段 | 类型 | 说明 |
+| Field | Type | Description |
 |------|------|------|
-| `enabled` | bool | 是否启用天气拉取（总开关） |
-| `showWeather` | bool | 天气画布可见性（独立于 enabled，可单独隐藏） |
-| `provider` | string | `'open-meteo'`（免 key）或 `'qweather'`（和风天气，需 apiKey） |
-| `apiKey` | string | 和风天气 API key（仅 provider=qweather 时需要） |
-| `city` | string | 城市名，`'auto'` 表示按系统时区自动检测 |
-| `intervalMin` | number | 拉取间隔（分钟），最小 5 |
+| `enabled` | bool | whether weather fetching is on (master switch) |
+| `showWeather` | bool | weather canvas visibility (independent of `enabled`, can be hidden separately) |
+| `provider` | string | `'open-meteo'` (no key needed) or `'qweather'` (QWeather, requires apiKey) |
+| `apiKey` | string | QWeather API key (only needed when provider=qweather) |
+| `city` | string | city name; `'auto'` detects it from the system timezone |
+| `intervalMin` | number | fetch interval in minutes, minimum 5 |
 
-### 天气数据（`/weather/now`、`/weather/test`、`/weather/inject` 返回）
+### Weather Data (returned by `/weather/now`, `/weather/test`, `/weather/inject`)
 
 ```json
 {
   "weather": {
     "provider": "open-meteo",
-    "city": "上海",
+    "city": "Shanghai",
     "weatherCode": 61,
     "weatherType": "rain",
-    "text": "雨",
+    "text": "Rain",
     "temp": 20,
     "feelsLike": 19,
     "humidity": 85,
@@ -52,121 +52,121 @@
 }
 ```
 
-### weatherType 取值
+### weatherType Values
 
-| weatherType | 含义 |
+| weatherType | Meaning |
 |-------------|------|
-| `clear` | 晴 |
-| `cloudy` | 多云 |
-| `rain` | 雨 |
-| `snow` | 雪 |
-| `fog` | 雾 |
-| `thunderstorm` | 雷暴 |
-| `sandstorm` | 沙尘暴（open-meteo，需低能见度+大风） |
-| `icy` | 结冰（低温场景） |
+| `clear` | clear |
+| `cloudy` | cloudy |
+| `rain` | rain |
+| `snow` | snow |
+| `fog` | fog |
+| `thunderstorm` | thunderstorm |
+| `sandstorm` | sandstorm (open-meteo, requires low visibility + high wind) |
+| `icy` | icy (low-temperature scenario) |
 
-## API 端点
+## API Endpoints
 
-### 读取配置
+### Read Config
 
 ```bash
 curl -s http://localhost:19851/weather/config
 ```
 
-### 更新配置
+### Update Config
 
-更新后自动重启轮询，并广播 `weather-config-changed` 给所有客户端。
+Automatically restarts polling after updating, and broadcasts `weather-config-changed` to all clients.
 
 ```bash
-# 启用天气 + 用 open-meteo（免 key）+ 自动城市
+# Enable weather + use open-meteo (no key needed) + auto city
 curl -s -X POST http://localhost:19851/weather/config -H 'Content-Type: application/json' \
   -d '{"enabled":true,"provider":"open-meteo","city":"auto","intervalMin":30}'
 
-# 切换到和风天气（需自己申请 key）
+# Switch to QWeather (requires your own key)
 curl -s -X POST http://localhost:19851/weather/config -H 'Content-Type: application/json' \
-  -d '{"provider":"qweather","apiKey":"你的KEY","city":"北京"}'
+  -d '{"provider":"qweather","apiKey":"YOUR_KEY","city":"Beijing"}'
 
-# 只隐藏天气画布（保持后台拉取）
+# Just hide the weather canvas (keep fetching in the background)
 curl -s -X POST http://localhost:19851/weather/config -H 'Content-Type: application/json' \
   -d '{"showWeather":false}'
 ```
 
-### 切换开关
+### Toggle On/Off
 
-快速翻转 `enabled`（等价于 config 里改 enabled）。
+Quickly flips `enabled` (equivalent to changing `enabled` via config).
 
 ```bash
 curl -s -X POST http://localhost:19851/weather/toggle
 ```
 
-### 读取当前天气
+### Read Current Weather
 
-返回最近一次缓存的天气数据（不会触发新请求）。
+Returns the most recently cached weather data (does not trigger a new request).
 
 ```bash
 curl -s http://localhost:19851/weather/now
 ```
 
-### 强制重新拉取
+### Force Refetch
 
-立即触发一次拉取并返回最新天气（用于配置完 apiKey 后验证是否生效）。
+Immediately triggers a fetch and returns the latest weather (useful for verifying after configuring an apiKey).
 
 ```bash
 curl -s -X POST http://localhost:19851/weather/test
 ```
 
-## 预览天气（开发/调试用）
+## Weather Preview (for development/debugging)
 
-`/weather/preview` 临时显示某种天气，**不会自动恢复**，需手动调 `/weather/preview-end` 结束。适合在没下雨时预览雨效。
+`/weather/preview` temporarily displays a given weather type; it **does not automatically revert** -- call `/weather/preview-end` manually to end it. Handy for previewing rain effects when it isn't actually raining.
 
-### 预览指定天气
+### Preview a Specific Weather Type
 
 ```bash
-# 预览下雨
+# Preview rain
 curl -s -X POST http://localhost:19851/weather/preview -H 'Content-Type: application/json' \
   -d '{"weatherType":"rain"}'
 
-# 预览夜晚的雪
+# Preview nighttime snow
 curl -s -X POST http://localhost:19851/weather/preview -H 'Content-Type: application/json' \
   -d '{"weatherType":"snow","isNight":true}'
 
-# 预览雷暴 + 特殊效果（如闪电 specialType）
+# Preview a thunderstorm + special effect (e.g. lightning specialType)
 curl -s -X POST http://localhost:19851/weather/preview -H 'Content-Type: application/json' \
   -d '{"weatherType":"thunderstorm","specialType":"lightning","isNight":false}'
 
-# 指定小时（影响光线角度）
+# Specify an hour (affects the lighting angle)
 curl -s -X POST http://localhost:19851/weather/preview -H 'Content-Type: application/json' \
   -d '{"weatherType":"clear","previewHour":18}'
 ```
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 |------|------|------|
-| `weatherType` | string | 见上方取值表 |
-| `specialType` | string\|null | 特殊效果（如闪电），传 null 清除 |
-| `isNight` | bool | 是否夜景（影响温度模板和光线） |
-| `previewHour` | number\|null | 小时（0-23），影响光照角度 |
+| `weatherType` | string | see the value table above |
+| `specialType` | string\|null | special effect (e.g. lightning); pass null to clear |
+| `isNight` | bool | whether it's a night scene (affects the temperature template and lighting) |
+| `previewHour` | number\|null | hour (0-23), affects the lighting angle |
 
-### 结束预览
+### End the Preview
 
-清除特殊效果并恢复真实天气。
+Clears any special effect and restores the real weather.
 
 ```bash
 curl -s -X POST http://localhost:19851/weather/preview-end
 ```
 
-## 注入假天气（测试用）
+## Injecting Fake Weather (for testing)
 
-`/weather/inject` 直接注入一个假天气对象并广播，绕过拉取。支持白天/夜晚变体（`clear`、`clear-night`、`rain-night` 等）。主要用于自动化测试。
+`/weather/inject` directly injects a fake weather object and broadcasts it, bypassing the fetch. Supports day/night variants (`clear`, `clear-night`, `rain-night`, etc.). Mainly used for automated testing.
 
 ```bash
 curl -s -X POST http://localhost:19851/weather/inject -H 'Content-Type: application/json' \
   -d '{"weatherType":"snow"}'
 ```
 
-## 注意事项
+## Notes
 
-- `open-meteo` 完全免费、无需注册；`qweather` 需要在 [dev.qweather.com](https://dev.qweather.com) 申请 key
-- `city: 'auto'` 时按系统时区推断城市名（如 `Asia/Shanghai` → 上海），再调 open-meteo 的 geocoding 接口解析坐标
-- 天气配置持久化在 `~/.cloe/config.json` 的 `weather` 字段，应用重启后自动恢复并继续轮询
-- `intervalMin` 最小值是 5（小于 5 会被强制改成 5），避免过于频繁请求
-- 客户端通过 WebSocket 收到 `weather-update`（天气变化）、`weather-config-changed`（配置变化）、`weather-special-preview`（特殊效果）消息
+- `open-meteo` is completely free and requires no registration; `qweather` requires applying for a key at [dev.qweather.com](https://dev.qweather.com)
+- When `city: 'auto'`, the city name is inferred from the system timezone (e.g. `Asia/Shanghai` -> Shanghai), and open-meteo's geocoding endpoint resolves the coordinates
+- Weather config is persisted under the `weather` field of `~/.cloe/config.json`, and automatically restored and polling resumed after an app restart
+- `intervalMin` has a minimum of 5 (values below 5 are forced up to 5) to avoid overly frequent requests
+- Clients receive `weather-update` (weather changed), `weather-config-changed` (config changed), and `weather-special-preview` (special effect) messages via WebSocket

@@ -224,20 +224,20 @@ export function TabCloseConfirm({ tab, onConfirm, onCancel }) {
     <div className="tab-bar-confirm-overlay" onClick={(e) => e.stopPropagation()}>
       <div className="tab-bar-confirm" onClick={(e) => e.stopPropagation()}>
         <div className="tab-bar-confirm-text">
-          {zh ? `关闭标签页「${tab.title}」？` : `Close tab "${tab.title}"?`}
+          {zh ? `Close tab "${tab.title}"?` : `Close tab "${tab.title}"?`}
         </div>
         <div className="tab-bar-confirm-actions">
           <button
             className="tab-bar-confirm-btn tab-bar-confirm-cancel"
             onClick={onCancel}
           >
-            {zh ? '取消' : 'Cancel'}
+            {zh ? 'Cancel' : 'Cancel'}
           </button>
           <button
             className="tab-bar-confirm-btn tab-bar-confirm-ok"
             onClick={onConfirm}
           >
-            {zh ? '关闭' : 'Close'}
+            {zh ? 'Close' : 'Close'}
           </button>
         </div>
       </div>

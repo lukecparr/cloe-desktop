@@ -6,10 +6,10 @@ const API_TTS_BASE = 'http://127.0.0.1:19851';
 const PROVIDER_FIELDS = {
   openai: [
     { key: 'api_key',   label: { zh: 'API Key',       en: 'API Key' },       type: 'password', placeholder: 'sk-...' },
-    { key: 'base_url',  label: { zh: 'Base URL',      en: 'Base URL' },      type: 'text',     placeholder: 'https://api.openai.com/v1 (兼容 Azure/代理/本地)' },
-    { key: 'model',     label: { zh: '模型',          en: 'Model' },         type: 'text',     placeholder: 'tts-1' },
-    { key: 'voice',     label: { zh: '声音',          en: 'Voice' },         type: 'text',     placeholder: 'alloy / nova / shimmer' },
-    { key: 'instructions', label: { zh: '语音指令（可选）', en: 'Instructions (optional)' }, type: 'text', placeholder: 'Speak in a warm, friendly tone' },
+    { key: 'base_url',  label: { zh: 'Base URL',      en: 'Base URL' },      type: 'text',     placeholder: 'https://api.openai.com/v1 (compatible with Azure/proxy/local)' },
+    { key: 'model',     label: { zh: 'Model',          en: 'Model' },         type: 'text',     placeholder: 'tts-1' },
+    { key: 'voice',     label: { zh: 'Voice',          en: 'Voice' },         type: 'text',     placeholder: 'alloy / nova / shimmer' },
+    { key: 'instructions', label: { zh: 'Instructions (optional)', en: 'Instructions (optional)' }, type: 'text', placeholder: 'Speak in a warm, friendly tone' },
   ],
   mosi: [
     { key: 'api_key',   label: { zh: 'API Key',       en: 'API Key' },       type: 'password', placeholder: 'sk-...' },
@@ -19,7 +19,7 @@ const PROVIDER_FIELDS = {
 };
 
 const PROVIDER_LABELS = {
-  openai: { zh: 'OpenAI 兼容 (OpenAI / Azure / 代理)', en: 'OpenAI Compatible (OpenAI / Azure / Proxy)' },
+  openai: { zh: 'OpenAI Compatible (OpenAI / Azure / Proxy)', en: 'OpenAI Compatible (OpenAI / Azure / Proxy)' },
   mosi:   { zh: 'MOSI', en: 'MOSI' },
 };
 
@@ -36,12 +36,12 @@ function renderTts() {
 
   container.innerHTML = `
     <div class="pref-section">
-      <h2 class="pref-section-title">${t('语音合成 (TTS)', 'Text-to-Speech (TTS)')}</h2>
+      <h2 class="pref-section-title">${t('Text-to-Speech (TTS)', 'Text-to-Speech (TTS)')}</h2>
       <div class="pref-group">
         <div class="pref-item">
           <div class="pref-info">
-            <div class="pref-label">${t('TTS 服务商', 'TTS Provider')}</div>
-            <div class="pref-desc">${t('选择语音合成服务商，配置信息保存在 ~/.cloe/tts-config.json', 'Choose a TTS provider. Config saved to ~/.cloe/tts-config.json')}</div>
+            <div class="pref-label">${t('TTS Provider', 'TTS Provider')}</div>
+            <div class="pref-desc">${t('Choose a TTS provider. Config saved to ~/.cloe/tts-config.json', 'Choose a TTS provider. Config saved to ~/.cloe/tts-config.json')}</div>
           </div>
           <div class="pref-control">
             <select id="tts-provider" class="form-input form-select" style="width:280px;">
@@ -54,22 +54,22 @@ function renderTts() {
     </div>
 
     <div class="pref-section">
-      <h2 class="pref-section-title" id="tts-fields-title">${t('服务商配置', 'Provider Configuration')}</h2>
+      <h2 class="pref-section-title" id="tts-fields-title">${t('Provider Configuration', 'Provider Configuration')}</h2>
       <div class="pref-group" id="tts-fields-container">
       </div>
     </div>
 
     <div class="pref-section">
-      <h2 class="pref-section-title">${t('测试', 'Test')}</h2>
+      <h2 class="pref-section-title">${t('Test', 'Test')}</h2>
       <div class="pref-group">
         <div class="pref-item">
           <div class="pref-info">
-            <div class="pref-label">${t('测试语音', 'Test Voice')}</div>
-            <div class="pref-desc">${t('生成一段测试语音并在桌面播放', 'Generate a test speech and play it on the desktop')}</div>
+            <div class="pref-label">${t('Test Voice', 'Test Voice')}</div>
+            <div class="pref-desc">${t('Generate a test speech and play it on the desktop', 'Generate a test speech and play it on the desktop')}</div>
           </div>
           <div class="pref-control">
-            <input type="text" id="tts-test-text" class="form-input" style="width:300px;" placeholder="${t('你好，我是可可', 'Hello, I am Cloe')}" value="${t('你好呀，语音功能配置成功啦', 'Hello, TTS is working!')}">
-            <button type="button" class="btn btn-primary btn-sm" id="tts-test-btn" style="margin-left:8px;">${t('测试', 'Test')}</button>
+            <input type="text" id="tts-test-text" class="form-input" style="width:300px;" placeholder="${t('Hello, I am Cloe', 'Hello, I am Cloe')}" value="${t('Hello, TTS is working!', 'Hello, TTS is working!')}">
+            <button type="button" class="btn btn-primary btn-sm" id="tts-test-btn" style="margin-left:8px;">${t('Test', 'Test')}</button>
             <span id="tts-test-result" style="font-size:12px;margin-left:8px;"></span>
           </div>
         </div>
@@ -98,7 +98,7 @@ function renderTts() {
               placeholder="${f.placeholder || ''}"
               value="${escapeAttr(currentConfig[provider]?.[f.key] || '')}"
               autocomplete="off" spellcheck="false">
-            ${f.type === 'password' ? `<button type="button" class="btn-icon btn-icon-sm" id="tts-toggle-${f.key}" title="${t('显示/隐藏', 'Show/Hide')}">👁</button>` : ''}
+            ${f.type === 'password' ? `<button type="button" class="btn-icon btn-icon-sm" id="tts-toggle-${f.key}" title="${t('Show/Hide', 'Show/Hide')}">👁</button>` : ''}
           </div>
         </div>
       </div>
@@ -171,10 +171,10 @@ function renderTts() {
   testBtn.addEventListener('click', async () => {
     saveConfig();
     testBtn.disabled = true;
-    testResult.textContent = t('生成中…', 'Generating…');
+    testResult.textContent = t('Generating…', 'Generating…');
     testResult.style.color = '';
     try {
-      const text = testTextInput.value.trim() || t('你好', 'Hello');
+      const text = testTextInput.value.trim() || t('Hello', 'Hello');
       const res = await fetch(`${API_TTS_BASE}/tts/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -182,10 +182,10 @@ function renderTts() {
       });
       const data = await res.json();
       if (data.ok) {
-        testResult.textContent = t('✅ 播放成功', '✅ Played successfully');
+        testResult.textContent = t('✅ Played successfully', '✅ Played successfully');
         testResult.style.color = 'var(--accent, #4fc3f7)';
       } else {
-        testResult.textContent = '❌ ' + (data.error || t('未知错误', 'Unknown error'));
+        testResult.textContent = '❌ ' + (data.error || t('Unknown error', 'Unknown error'));
         testResult.style.color = 'var(--danger, #e57373)';
       }
     } catch (e) {

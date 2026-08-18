@@ -1,14 +1,14 @@
-# 任务管理 API
+# Task Management API
 
-通过 Bridge API 创建和管理任务列表，支持计时（tracking 每个任务投入的时间）、完成/重开、优先级排序。任务列表会在角色的任务面板里实时显示。
+Create and manage a task list through the Bridge API, with support for timing (tracking time spent per task), completion/reopening, and priority ordering. The task list is displayed live in the character's task panel.
 
-## 数据模型
+## Data Model
 
 ```json
 {
   "id": "task_1719400000000_abc12",
-  "title": "写文档",
-  "content": "补全 weather 和 tasks 的 API 文档",
+  "title": "Write docs",
+  "content": "Fill in the weather and tasks API documentation",
   "status": "pending",
   "created_at": "2026-07-26T10:00:00.000Z",
   "updated_at": "2026-07-26T10:00:00.000Z",
@@ -17,111 +17,111 @@
 }
 ```
 
-| 字段 | 类型 | 说明 |
+| Field | Type | Description |
 |------|------|------|
-| `id` | string | 自动生成（`task_<时间戳>_<随机>`），创建时可自传 |
-| `title` | string | 标题（必填，空则用 `'Untitled'`） |
-| `content` | string | 详情/备注（可选） |
-| `status` | string | `pending`（待办）\| `timing`（计时中）\| `completed`（已完成） |
-| `created_at` | string | 创建时间 ISO |
-| `updated_at` | string | 最后更新时间 ISO |
-| `completed_at` | string\|null | 完成时间 ISO（未完成为 null） |
-| `elapsed_seconds` | number | 累计已计时秒数（多次 start/stop 会累加） |
+| `id` | string | auto-generated (`task_<timestamp>_<random>`), can be provided manually on creation |
+| `title` | string | title (required; defaults to `'Untitled'` if empty) |
+| `content` | string | details/notes (optional) |
+| `status` | string | `pending` \| `timing` (currently timed) \| `completed` |
+| `created_at` | string | creation time, ISO |
+| `updated_at` | string | last update time, ISO |
+| `completed_at` | string\|null | completion time, ISO (null if not completed) |
+| `elapsed_seconds` | number | total elapsed seconds (accumulates across multiple start/stop cycles) |
 
-## 排序规则
+## Ordering Rules
 
-- 任务有**优先级顺序**（`order` 数组），靠前的优先级更高
-- 活跃任务（pending/timing）排在前面，已完成（completed）排在后面
-- 新建任务插入到活跃区末尾（已完成区之前）
-- `GET /tasks` 和 `POST /tasks/reorder` 返回的列表都是按此规则排序后的
+- Tasks have a **priority order** (the `order` array); earlier entries have higher priority
+- Active tasks (pending/timing) come before completed ones
+- New tasks are inserted at the end of the active section (before the completed section)
+- Both `GET /tasks` and `POST /tasks/reorder` return the list sorted per this rule
 
-## API 端点
+## API Endpoints
 
-### 列出所有任务
+### List All Tasks
 
 ```bash
 curl -s http://localhost:19851/tasks
 # {"tasks": [...], "timing_id": null}
 ```
 
-`timing_id` 是当前正在计时的任务 id（同一时刻最多一个任务在计时），没有则为 `null`。
+`timing_id` is the id of the currently-timed task (at most one task can be timed at once); `null` if none.
 
-### 创建任务
+### Create a Task
 
 ```bash
 curl -s -X POST http://localhost:19851/tasks -H 'Content-Type: application/json' \
-  -d '{"title":"写文档","content":"补全 API 文档"}'
+  -d '{"title":"Write docs","content":"Fill in API documentation"}'
 
-# 自定义 id
+# Custom id
 curl -s -X POST http://localhost:19851/tasks -H 'Content-Type: application/json' \
   -d '{"id":"my-task-1","title":"Review PR"}'
 ```
 
-### 更新任务
+### Update a Task
 
-只能改 `title` 和 `content`（状态变更请用下方的 complete/reopen/start/stop）。
+Only `title` and `content` can be changed (use complete/reopen/start/stop below for status changes).
 
 ```bash
 curl -s -X PATCH http://localhost:19851/tasks/task_1719400000000_abc12 -H 'Content-Type: application/json' \
-  -d '{"title":"新标题","content":"新内容"}'
+  -d '{"title":"New title","content":"New content"}'
 ```
 
-### 删除任务
+### Delete a Task
 
 ```bash
 curl -s -X DELETE http://localhost:19851/tasks/task_1719400000000_abc12
 ```
 
-### 标记完成 / 重新打开
+### Mark Complete / Reopen
 
 ```bash
-# 标记完成（自动停止计时，记录 completed_at）
+# Mark complete (automatically stops timing, records completed_at)
 curl -s -X POST http://localhost:19851/tasks/task_1719400000000_abc12/complete
 
-# 重新打开（status 回到 pending，completed_at 清空）
+# Reopen (status goes back to pending, completed_at is cleared)
 curl -s -X POST http://localhost:19851/tasks/task_1719400000000_abc12/reopen
 ```
 
-## 计时功能
+## Timing
 
-每个任务可以单独计时，用于追踪投入时间。**同一时刻只能有一个任务在计时**——开始新任务会自动停止旧任务。
+Each task can be timed individually, to track time invested. **Only one task can be timed at a time** -- starting a new one automatically stops the previous one.
 
-### 开始计时
+### Start Timing
 
 ```bash
 curl -s -X POST http://localhost:19851/tasks/task_1719400000000_abc12/start
 ```
 
-- 任务 status 变为 `timing`
-- 如果之前有别的任务在计时，会先停掉它（累计它的秒数）
-- 每秒广播一次 `task-timer-tick` 给客户端（含当前 timing_id 和 elapsed）
+- Task status changes to `timing`
+- If another task was being timed, it's stopped first (its elapsed seconds are accumulated)
+- Broadcasts `task-timer-tick` to clients every second (including the current timing_id and elapsed time)
 
-### 停止计时
+### Stop Timing
 
 ```bash
 curl -s -X POST http://localhost:19851/tasks/task_1719400000000_abc12/stop
 ```
 
-- 累计本次计时秒数到 `elapsed_seconds`
-- status 变回 `pending`
+- Accumulates this session's elapsed seconds into `elapsed_seconds`
+- Status reverts to `pending`
 
-> 完成一个 timing 中的任务会自动停止计时；删除 timing 中的任务也会清理计时状态。
+> Completing a task that's currently being timed automatically stops the timer; deleting a task being timed also clears the timing state.
 
-## 重排任务
+## Reordering Tasks
 
-调整任务优先级顺序（在活跃区内移动）。
+Adjusts task priority order (moves it within the active section).
 
 ```bash
-# 把第 0 个任务移到第 2 个位置
+# Move task 0 to position 2
 curl -s -X POST http://localhost:19851/tasks/reorder -H 'Content-Type: application/json' \
   -d '{"from_idx":0,"to_idx":2}'
 ```
 
-返回重排后的完整列表。`from_idx`/`to_idx` 是基于 `GET /tasks` 返回数组（含已完成）的索引。
+Returns the full reordered list. `from_idx`/`to_idx` are indexes into the array returned by `GET /tasks` (including completed tasks).
 
-## 注意事项
+## Notes
 
-- `id` 在 URL 里需要 `encodeURIComponent`（自定义 id 含特殊字符时）
-- 任务持久化在 `~/.cloe/tasks.json`，顺序在 `~/.cloe/task-order.json`，应用重启后自动恢复
-- 重启时不会自动恢复 `timing` 状态（计时中的任务会被重置为 `pending`，但 `elapsed_seconds` 保留）——因为关机期间的时间不该计入
-- 客户端通过 WebSocket 收到 `task-created`、`task-updated`、`task-deleted`、`task-completed`、`task-reopened`、`task-timing-started`、`task-timing-stopped`、`task-reordered`、`task-timer-tick` 等消息
+- `id` needs `encodeURIComponent` in the URL (for custom ids containing special characters)
+- Tasks are persisted in `~/.cloe/tasks.json`, order in `~/.cloe/task-order.json`, both automatically restored after an app restart
+- The `timing` state is not restored on restart (a task being timed is reset to `pending`, but `elapsed_seconds` is preserved) -- time elapsed while the app was off shouldn't count
+- Clients receive `task-created`, `task-updated`, `task-deleted`, `task-completed`, `task-reopened`, `task-timing-started`, `task-timing-stopped`, `task-reordered`, `task-timer-tick`, etc. via WebSocket

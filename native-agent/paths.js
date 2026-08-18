@@ -1,16 +1,17 @@
 'use strict';
 
 /**
- * Native Agent Paths — 统一路径管理
+ * Native Agent Paths — unified path management
  *
- * Cloe Desktop 有自己的目录体系 (~/.cloe/)，
- * 当自有目录不存在时，兼容 fallback 到 Hermes (~/.hermes/)。
- * 这样 Cloe 可以脱离 Hermes 独立运行，过渡期无缝复用已有数据。
+ * Cloe Desktop has its own directory structure (~/.cloe/),
+ * and falls back to Hermes (~/.hermes/) when its own directory doesn't exist.
+ * This lets Cloe run independently of Hermes, while seamlessly reusing
+ * existing data during the transition period.
  *
- * 优先级:
- *   1. 用户在 config 中显式指定的路径
- *   2. ~/.cloe/ 下的自有路径（如果文件/目录存在）
- *   3. ~/.hermes/ 下的兼容路径（fallback）
+ * Priority:
+ *   1. Path explicitly specified by the user in config
+ *   2. Own path under ~/.cloe/ (if the file/directory exists)
+ *   3. Compatibility path under ~/.hermes/ (fallback)
  */
 
 const fs = require('fs');

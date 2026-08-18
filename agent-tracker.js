@@ -71,20 +71,20 @@ function speakFallback(event) {
 function getAgentTTSMessage(session, event) {
   const displayName = session.title || session.source_label || session.source;
   const TURN_END_SUFFIXES = [
-    '完成了一轮',
-    '跑完啦',
-    '这轮搞定啦',
-    '做完了',
-    '一轮搞定',
-    '搞定啦，你要看看吗',
+    ' finished a turn',
+    ' wrapped up a run',
+    ' nailed this round',
+    ' is done',
+    ' knocked out a round',
+    ' got it done, want to take a look?',
   ];
   const NEEDS_DECISION_SUFFIXES = [
-    '需要你决策',
-    '在等你拿主意',
-    '需要你拍个板',
-    '卡住了，等你决定',
-    '有个事要你定一下',
-    '在等你决定呢',
+    ' needs your call',
+    ' is waiting on your decision',
+    ' needs you to make the call',
+    ' is stuck, waiting on you',
+    ' has something for you to decide',
+    ' is waiting for your decision',
   ];
   const suffixes = event === 'turn-end' ? TURN_END_SUFFIXES
     : event === 'needs-decision' ? NEEDS_DECISION_SUFFIXES

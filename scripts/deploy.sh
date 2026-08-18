@@ -23,7 +23,7 @@ npx electron-builder --mac --dir --config.npmRebuild=false
 echo "⏳ Step 4: Verify pty.node exists in output..."
 PTY_NODE=$(find release/mac-arm64/Cloe.app -name "pty.node" -type f | head -1)
 if [[ -z "$PTY_NODE" ]]; then
-  echo "✗ pty.node 未找到! 终端将无法输入"
+  echo "✗ pty.node not found! Terminal input will not work"
   exit 1
 fi
 echo "  ✓ Found: $PTY_NODE"
@@ -40,9 +40,9 @@ cp -R release/mac-arm64/Cloe.app "$APP_PATH"
 SRC_MD5=$(md5 -q release/mac-arm64/Cloe.app/Contents/Resources/app.asar)
 DST_MD5=$(md5 -q "$APP_PATH/Contents/Resources/app.asar")
 if [[ "$SRC_MD5" != "$DST_MD5" ]]; then
-  echo "✗ asar MD5 不匹配!"; exit 1
+  echo "✗ asar MD5 mismatch!"; exit 1
 fi
-echo "  ✓ asar 校验通过"
+echo "  ✓ asar verification passed"
 
 echo "⏳ Step 7: Launch..."
 open "$APP_PATH"

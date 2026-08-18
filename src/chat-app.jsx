@@ -622,7 +622,7 @@ function ChatApp() {
         type: 'tool',
         tool: 'retry',
         emoji: '🔄',
-        label: `网络波动，自动重试中 (${info.attempt}/${info.maxRetries})…`,
+        label: `Network hiccup, retrying automatically (${info.attempt}/${info.maxRetries})...`,
       });
       streamBufferRef.current = { parts };
       setStreamingParts([...parts]);
@@ -654,7 +654,7 @@ function ChatApp() {
         type: 'tool',
         tool: 'followup',
         emoji: '🤖',
-        label: '后台任务完成，正在整理结果…',
+        label: 'Background task finished, wrapping up the result...',
       });
       setStreamingParts([...streamBufferRef.current.parts]);
     });

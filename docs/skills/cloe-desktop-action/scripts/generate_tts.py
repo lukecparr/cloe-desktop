@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """
-MOSI TTS 音频生成脚本
+MOSI TTS audio generation script
 
-从 ~/.cloe/tts-config.json 读取配置，生成 MP3 音频文件。
-输出到 ~/.cloe/audio_cache/ 目录。
+Reads config from ~/.cloe/tts-config.json and generates an MP3 audio file.
+Outputs to the ~/.cloe/audio_cache/ directory.
 
-用法:
-  python3 generate_tts.py --text "要说的话"
-  python3 generate_tts.py --text "要说的话" --output /tmp/custom.mp3
-  python3 generate_tts.py --text "要说的话" --speak  # 生成后自动触发桌面 speak
+Usage:
+  python3 generate_tts.py --text "what to say"
+  python3 generate_tts.py --text "what to say" --output /tmp/custom.mp3
+  python3 generate_tts.py --text "what to say" --speak  # auto-trigger desktop speak after generation
 
-输出: 打印生成的 MP3 文件路径（方便调用方 capture stdout）
+Output: prints the generated MP3 file path (convenient for the caller to capture via stdout)
 """
 
 import argparse
@@ -34,7 +34,7 @@ def load_config():
 
 
 def generate_mosi(text, api_key, voice_id, url):
-    """调用 MOSI 云端 TTS，返回 WAV 字节数据"""
+    """Call the MOSI cloud TTS service, returning WAV byte data"""
     payload = json.dumps({
         "model": "moss-tts",
         "text": text,
@@ -55,13 +55,13 @@ def generate_mosi(text, api_key, voice_id, url):
 
     audio_b64 = result.get("audio_data")
     if not audio_b64:
-        raise RuntimeError(f"MOSI 返回无 audio_data: {list(result.keys())}")
+        raise RuntimeError(f"MOSI response missing audio_data: {list(result.keys())}")
 
     return base64.b64decode(audio_b64)
 
 
 def generate_cosyvoice(text, api_key, model, voice):
-    """调用阿里云 CosyVoice TTS，返回 MP3 字节数据"""
+    """Call Alibaba Cloud CosyVoice TTS, returning MP3 byte data"""
     import urllib.request
 
     payload = json.dumps({
@@ -82,21 +82,23 @@ def generate_cosyvoice(text, api_key, model, voice):
     with urllib.request.urlopen(req, timeout=30) as resp:
         result = json.loads(resp.read())
 
-    # CosyVoice 返回音频 URL，需要下载
+    # CosyVoice returns an audio URL, which needs to be downloaded
     audio_url = result.get("output", {}).get("audio_url")
     if not audio_url:
-        raise RuntimeError(f"CosyVoice 返回无 audio_url: {result}")
+        raise RuntimeError(f"CosyVoice response missing audio_url: {result}")
 
     with urllib.request.urlopen(audio_url, timeout=30) as audio_resp:
         return audio_resp.read()
 
 
 def wav_to_mp3(wav_path, mp3_path):
-    """WAV 转 MP3（Electron new Audio() 播放 WAV 不完整，必须转）
+    """Convert WAV to MP3 (Electron's new Audio() plays WAV incompletely, so
+    conversion is required)
 
-    必须使用 CBR + 标准采样率（44100Hz）：Chromium 对低采样率 VBR MP3
-    （如 MOSI 返回的 24000Hz WAV 转出的 MPEG 2.0 Layer III）缓冲不足，
-    会在 ~10s 处截断。CBR 128kbps + 44100Hz 可稳定播放任意时长。
+    Must use CBR + a standard sample rate (44100Hz): Chromium under-buffers
+    low-sample-rate VBR MP3 (e.g. the MPEG 2.0 Layer III produced from the
+    24000Hz WAV that MOSI returns), causing it to cut off at around 10s.
+    CBR 128kbps + 44100Hz plays reliably at any duration.
     """
     subprocess.run([
         "ffmpeg", "-y", "-i", wav_path,
@@ -107,7 +109,7 @@ def wav_to_mp3(wav_path, mp3_path):
 
 
 def trigger_speak(mp3_filename):
-    """触发桌面端 speak 动作播放音频"""
+    """Trigger the desktop app's speak action to play the audio"""
     import urllib.request
 
     payload = json.dumps({
@@ -125,11 +127,11 @@ def trigger_speak(mp3_filename):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="MOSI TTS 音频生成")
-    parser.add_argument("--text", required=True, help="要合成的文本")
-    parser.add_argument("--output", default=None, help="输出 MP3 路径（默认 ~/.cloe/audio_cache/tts_<timestamp>.mp3）")
-    parser.add_argument("--speak", action="store_true", help="生成后自动触发桌面 speak 播放")
-    parser.add_argument("--provider", default=None, help="强制指定 provider（mosi/cosyvoice），默认读配置")
+    parser = argparse.ArgumentParser(description="MOSI TTS audio generation")
+    parser.add_argument("--text", required=True, help="Text to synthesize")
+    parser.add_argument("--output", default=None, help="Output MP3 path (default ~/.cloe/audio_cache/tts_<timestamp>.mp3)")
+    parser.add_argument("--speak", action="store_true", help="Auto-trigger desktop speak playback after generation")
+    parser.add_argument("--provider", default=None, help="Force a specific provider (mosi/cosyvoice); defaults to reading from config")
     args = parser.parse_args()
 
     config = load_config()
@@ -144,27 +146,27 @@ def main():
 
     if provider == "mosi":
         cfg = config["mosi"]
-        print(f"[INFO] MOSI TTS 生成中...", file=sys.stderr)
+        print(f"[INFO] Generating MOSI TTS...", file=sys.stderr)
         wav_bytes = generate_mosi(args.text, cfg["api_key"], cfg["voice_id"], cfg["url"])
-        # 保存临时 WAV
+        # Save the temporary WAV
         wav_path = mp3_path + ".wav"
         with open(wav_path, "wb") as f:
             f.write(wav_bytes)
         print(f"[INFO] WAV: {wav_path} ({len(wav_bytes)} bytes)", file=sys.stderr)
-        # 转 MP3
+        # Convert to MP3
         wav_to_mp3(wav_path, mp3_path)
         os.remove(wav_path)
     elif provider == "cosyvoice":
         cfg = config["cosyvoice"]
         api_key = os.environ.get(cfg["api_key_env"])
         if not api_key:
-            raise ValueError(f"环境变量 {cfg['api_key_env']} 未设置")
-        print(f"[INFO] CosyVoice TTS 生成中...", file=sys.stderr)
+            raise ValueError(f"Environment variable {cfg['api_key_env']} is not set")
+        print(f"[INFO] Generating CosyVoice TTS...", file=sys.stderr)
         mp3_bytes = generate_cosyvoice(args.text, api_key, cfg["model"], cfg["voice"])
         with open(mp3_path, "wb") as f:
             f.write(mp3_bytes)
     else:
-        raise ValueError(f"未知 provider: {provider}")
+        raise ValueError(f"Unknown provider: {provider}")
 
     size = os.path.getsize(mp3_path)
     print(f"[OK] MP3: {mp3_path} ({size} bytes)", file=sys.stderr)
@@ -174,7 +176,7 @@ def main():
         result = trigger_speak(filename)
         print(f"[OK] speak triggered: {result}", file=sys.stderr)
 
-    # stdout 只输出路径，方便调用方 capture
+    # stdout only outputs the path, convenient for the caller to capture
     print(mp3_path)
 
 

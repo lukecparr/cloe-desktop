@@ -8,9 +8,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import { TERMINAL_THEMES } from './terminalThemes';
 
 const TRANSPARENCY_LABELS = {
-  semi: '半透明 → 完全透明',
-  full: '完全透明 → 不透明',
-  opaque: '不透明 → 半透明',
+  semi: 'Semi-transparent -> Fully transparent',
+  full: 'Fully transparent -> Opaque',
+  opaque: 'Opaque -> Semi-transparent',
 };
 
 function ThemePicker({ mode }) {
@@ -156,7 +156,7 @@ export default function OverlayTitlebar({ onClose, mode, onModeChange, overlayTr
       <button
         className={`mode-btn opacity-toggle${overlayTransparency !== 'semi' ? ' active' : ''}`}
         onClick={onToggleTransparent}
-        title={TRANSPARENCY_LABELS[overlayTransparency] || '切换透明度'}
+        title={TRANSPARENCY_LABELS[overlayTransparency] || 'Toggle transparency'}
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="12" r="10" />

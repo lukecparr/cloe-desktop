@@ -144,8 +144,8 @@ function buildActionsList(setId) {
       trigger = 'idle';
       idleWeight = idleCounts[name];
     }
-    if (name === 'working') special = '工作模式';
-    if (name === 'speak') special = '语音';
+    if (name === 'working') special = 'Work Mode';
+    if (name === 'speak') special = 'Voice';
 
     const hooks = hookTriggers[name];
     if (hooks) {

@@ -371,7 +371,7 @@ const {
 } = require('./src/main/config');
 
 // ==================== Window ====================
-const BASE_WIDTH = 500;  // GIF 400px + 边距
+const BASE_WIDTH = 500;  // GIF 400px + margin
 const BASE_HEIGHT = 520;
 const MIN_SCALE = 0.3;
 const MAX_SCALE = 2.0;

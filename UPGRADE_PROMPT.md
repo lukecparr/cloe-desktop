@@ -1,30 +1,30 @@
-# Cloe Desktop Native Agent — Memory & Coding Tools 升级提示词
+# Cloe Desktop Native Agent — Memory & Coding Tools Upgrade Prompt
 
-## 项目背景
+## Project Background
 
-Cloe Desktop 是一个 Electron 桌面 AI 伴侣应用。其中 `native-agent/` 目录是一个独立的 agent runtime，基于 `@earendil-works/pi-agent-core` 框架，不依赖外部进程。
+Cloe Desktop is an Electron desktop AI companion app. The `native-agent/` directory within it is a standalone agent runtime, built on the `@earendil-works/pi-agent-core` framework, with no dependency on external processes.
 
-### 核心文件结构
+### Core File Structure
 
 ```
 native-agent/
-├── agent.js      (547行) — AgentSession 类，管理 Pi Agent 实例、上下文、重试、thinking
-├── tools.js      (504行) — 工具定义和执行（terminal, file_read, file_write, file_search, web_search, web_read, load_skill, memory, cloe_action, cloe_tts）
-├── memory.js     (146行) — 记忆存储，JSON 文件持久化
-├── config.js     (176行) — 配置管理，~/.cloe/native-agent.json
-├── paths.js      (72行)  — 统一路径管理，~/.cloe/ 优先，~/.hermes/ fallback
-├── skills.js     (159行) — Skill 发现和加载
-├── soul.js       (138行) — 灵魂文件加载 + system prompt 构建
-├── web-search.js (467行) — 多 provider 搜索引擎（zhipu_mcp/tavily/ddg/bing/serpapi）
-└── cron.js       (310行) — 定时任务
+├── agent.js      (547 lines) — AgentSession class, manages the Pi Agent instance, context, retries, thinking
+├── tools.js      (504 lines) — Tool definitions and execution (terminal, file_read, file_write, file_search, web_search, web_read, load_skill, memory, cloe_action, cloe_tts)
+├── memory.js     (146 lines) — Memory storage, persisted as a JSON file
+├── config.js     (176 lines) — Configuration management, ~/.cloe/native-agent.json
+├── paths.js      (72 lines)  — Unified path management, ~/.cloe/ preferred, ~/.hermes/ fallback
+├── skills.js     (159 lines) — Skill discovery and loading
+├── soul.js       (138 lines) — Soul file loading + system prompt construction
+├── web-search.js (467 lines) — Multi-provider search engine (zhipu_mcp/tavily/ddg/bing/serpapi)
+└── cron.js       (310 lines) — Scheduled tasks
 ```
 
-### 工具调用机制
+### Tool-Calling Mechanism
 
-tools.js 导出 `getTools()` 返回工具定义数组（OpenAI function calling 格式），和 `executeTool(name, args)` 执行工具。
-agent.js 的 `AgentSession.run()` 创建 Pi Agent 实例，注册工具，处理流式事件（text delta, thinking delta, tool call, tool result, turn end, agent end）。
+tools.js exports `getTools()`, which returns an array of tool definitions (OpenAI function-calling format), and `executeTool(name, args)`, which executes a tool.
+agent.js's `AgentSession.run()` creates a Pi Agent instance, registers tools, and handles streaming events (text delta, thinking delta, tool call, tool result, turn end, agent end).
 
-### Pi Agent Core 的 AgentTool 接口
+### Pi Agent Core's AgentTool Interface
 
 ```typescript
 interface AgentTool {
@@ -35,56 +35,56 @@ interface AgentTool {
 }
 ```
 
-Pi Agent 支持 `transformContext` hook（每次 LLM 调用前执行）、thinking levels（off/minimal/low/medium/high/xhigh/max）、自动 compaction。
+Pi Agent supports a `transformContext` hook (runs before every LLM call), thinking levels (off/minimal/low/medium/high/xhigh/max), and automatic compaction.
 
 ---
 
-## 升级任务 A：Memory 系统重构
+## Upgrade Task A: Memory System Refactor
 
-### 当前实现的问题
+### Problems with the Current Implementation
 
-`native-agent/memory.js` 现状：
-- 存储在 `~/.cloe/native-agent-memory.json`，纯 JSON 数组
-- 最多 50 条，超过时按 `trust × last_used` 淘汰
-- trust 初始 0.5，但代码中**没有任何地方调用 setTrust()**，所以 trust 永远不变
-- 搜索是简单的 `content.includes(query)` 子串匹配
-- 注入 system prompt 时最多 4000 字符
-- render() 每次调用都会 saveMemory()（更新 last_used），有性能问题
+Current state of `native-agent/memory.js`:
+- Stored at `~/.cloe/native-agent-memory.json`, a plain JSON array
+- Capped at 50 entries; when exceeded, evicts by `trust × last_used`
+- trust starts at 0.5, but **nothing in the code ever calls setTrust()**, so trust never changes
+- Search is a simple `content.includes(query)` substring match
+- Injected into the system prompt with a cap of 4000 characters
+- render() calls saveMemory() on every invocation (updating last_used), which is a performance problem
 
-### 目标设计：分层记忆 + 衰减遗忘
+### Target Design: Tiered Memory + Decaying Forgetfulness
 
-#### 1. 分类策略
-
-```
-user_pref  — 用户偏好/个人信息（永不淘汰，上限 100 条，全量注入）
-project    — 项目相关知识（LRU 衰减，上限 100 条）
-tool       — 工具使用经验（LRU 衰减，上限 80 条）
-general    — 一般知识（LRU 衰减，上限 50 条）
-```
-
-#### 2. Trust 动态衰减
-
-- 新记忆初始 trust = 0.5
-- 每次 render() 注入时 trust += 0.02（使用即强化）
-- 每次 search() 命中时 trust += 0.1
-- 每天 trust -= 0.01（时间衰减），最低 0.1
-- trust < 0.05 且非 user_pref → 自动淘汰
-
-#### 3. 注入策略
+#### 1. Category Strategy
 
 ```
-system prompt 注入预算 = 6000 字符
-优先级: user_pref 全注入 → tool 按 trust 降序 → project 按 trust 降序 → general 按 trust 降序
-直到用完预算
+user_pref  — user preferences/personal info (never evicted, cap of 100 entries, injected in full)
+project    — project-related knowledge (LRU decay, cap of 100 entries)
+tool       — tool-usage experience (LRU decay, cap of 80 entries)
+general    — general knowledge (LRU decay, cap of 50 entries)
 ```
 
-#### 4. 搜索优化
+#### 2. Dynamic Trust Decay
 
-- 子串匹配保留（快）
-- 加 tag 匹配（add 时可以打标签）
-- 返回结果按 trust + recency 综合排序
+- New memories start at trust = 0.5
+- trust += 0.02 each time it's injected via render() (use reinforces it)
+- trust += 0.1 each time it's matched by search()
+- trust -= 0.01 per day (time decay), floor of 0.1
+- trust < 0.05 and not user_pref → automatically evicted
 
-#### 5. 数据结构
+#### 3. Injection Strategy
+
+```
+system prompt injection budget = 6000 characters
+priority: user_pref injected in full → tool sorted by trust descending → project sorted by trust descending → general sorted by trust descending
+until the budget is used up
+```
+
+#### 4. Search Optimization
+
+- Keep substring matching (fast)
+- Add tag matching (tags can be attached on add)
+- Sort results by a combination of trust + recency
+
+#### 5. Data Structure
 
 ```json
 {
@@ -92,7 +92,7 @@ system prompt 注入预算 = 6000 字符
   "entries": [
     {
       "id": "uuid",
-      "content": "记忆内容",
+      "content": "memory content",
       "category": "user_pref",
       "tags": ["name", "personal"],
       "trust": 0.8,
@@ -105,103 +105,103 @@ system prompt 注入预算 = 6000 字符
 }
 ```
 
-#### 6. 迁移
+#### 6. Migration
 
-检测到 v1 格式（无 version 字段或 version !== 2）时自动迁移，所有现有记忆设 category = "general"，trust = 0.5。
+When the v1 format is detected (no version field, or version !== 2), migrate automatically: set category = "general" and trust = 0.5 for all existing memories.
 
-#### 7. 性能
+#### 7. Performance
 
-- render() 不再每次 saveMemory()，改为只在 trust 变化超过阈值（0.05）时写入
-- 或者用 dirty flag + 延迟写入（30 秒一次 flush）
+- render() should no longer call saveMemory() on every invocation; instead only write when the trust change exceeds a threshold (0.05)
+- Or use a dirty flag + deferred write (flush every 30 seconds)
 
-### 接口保持兼容
+### Interface Stays Backward-Compatible
 
-外部调用方式不变：
+The external calling convention is unchanged:
 ```js
-memory.add(content, category, tags)  // tags 改为可选字符串或数组
+memory.add(content, category, tags)  // tags becomes an optional string or array
 memory.remove(idOrContent)
 memory.search(query)
 memory.render()  // → string for system prompt
 ```
 
-tools.js 中的 memory 工具定义不变，但 execute 里可以传 tags 参数。
+The memory tool definition in tools.js stays the same, but its execute can pass a tags parameter.
 
 ---
 
-## 升级任务 B：Coding 能力增强
+## Upgrade Task B: Coding Capability Enhancements
 
-### 当前问题
+### Current Problems
 
-1. **file_write 是全量覆盖** — 整个文件重写，容易误改不该改的内容，且浪费 token
-2. **没有 file_edit 工具** — 无法做精确的局部修改
-3. **工具串行执行** — 多个独立工具调用不能并行
-4. **没有自动验证** — 改完代码不会自动检查语法或运行测试
-5. **缺少目录浏览** — 没有 ls/tree 工具，了解项目结构全靠 grep/find
+1. **file_write is a full overwrite** — the whole file gets rewritten, which risks changing content that shouldn't change and wastes tokens
+2. **No file_edit tool** — no way to make precise, localized edits
+3. **Tools execute serially** — independent tool calls can't run in parallel
+4. **No automatic verification** — after code is changed, there's no automatic syntax check or test run
+5. **No directory browsing** — no ls/tree tool, so understanding the project structure relies entirely on grep/find
 
-### 目标设计
+### Target Design
 
-#### B1. 新增 file_edit 工具（最重要）
+#### B1. Add a file_edit Tool (Most Important)
 
-基于 diff 的精确文件编辑，支持两种模式：
+Diff-based precise file editing, supporting two modes:
 
-**模式 1：行替换**
+**Mode 1: Text replacement**
 ```json
 {
   "name": "file_edit",
   "parameters": {
-    "path": "文件路径",
+    "path": "file path",
     "edits": [
       {
-        "oldText": "要替换的原文（必须精确匹配，包含上下文行）",
-        "newText": "替换后的新文本"
+        "oldText": "original text to replace (must match exactly, including context lines)",
+        "newText": "replacement text"
       }
     ]
   }
 }
 ```
 
-实现逻辑：
-1. 读取文件内容
-2. 对每个 edit，在文件中搜索 oldText
-3. 如果精确匹配到一个位置 → 替换
-4. 如果匹配到多个位置 → 报错，要求提供更多上下文
-5. 如果匹配不到 → 报错，返回最相似的行（帮助 debugging）
-6. 所有 edits 应用后写回文件
-7. 返回 diff 摘要（改了几处，每处 +/- 行数）
+Implementation logic:
+1. Read the file content
+2. For each edit, search the file for oldText
+3. If it matches exactly one location → replace it
+4. If it matches multiple locations → error, requiring more context
+5. If no match is found → error, returning the most similar line (to help debugging)
+6. Write the file back once all edits are applied
+7. Return a diff summary (how many spots changed, +/- line counts for each)
 
-关键：oldText 必须是**唯一匹配**的，否则报错。这强制 LLM 提供足够上下文。
+Key point: oldText must be a **unique match**, otherwise it errors. This forces the LLM to provide enough context.
 
-**模式 2：行号编辑（备选）**
+**Mode 2: Line-number editing (alternative)**
 ```json
 {
-  "path": "文件路径",
+  "path": "file path",
   "lineEdits": [
-    { "startLine": 10, "endLine": 15, "newText": "新内容" }
+    { "startLine": 10, "endLine": 15, "newText": "new content" }
   ]
 }
 ```
 
-#### B2. 新增 list_files 工具
+#### B2. Add a list_files Tool
 
 ```json
 {
   "name": "list_files",
   "parameters": {
-    "path": "目录路径（默认 ~）",
+    "path": "directory path (default ~)",
     "recursive": false,
     "maxDepth": 2
   }
 }
 ```
 
-返回目录树，帮助 LLM 了解项目结构。排除 node_modules/.git/dist 等。
+Returns a directory tree to help the LLM understand the project structure. Excludes node_modules/.git/dist, etc.
 
-#### B3. 工具执行后自动验证
+#### B3. Automatic Verification After Tool Execution
 
-在 tools.js 的 executeTool 中，特定工具执行后自动追加验证：
+In tools.js's executeTool, append automatic verification after specific tools run:
 
 ```js
-// file_write 或 file_edit 对 .js/.jsx/.ts 文件操作后
+// After file_write or file_edit operates on a .js/.jsx/.ts file
 if (p.endsWith('.js') || p.endsWith('.jsx') || p.endsWith('.ts')) {
   const check = await runShell(`node -c "${p}"`, 5000);
   if (check.includes('SyntaxError')) {
@@ -210,39 +210,39 @@ if (p.endsWith('.js') || p.endsWith('.jsx') || p.endsWith('.ts')) {
 }
 ```
 
-#### B4. file_read 增强
+#### B4. file_read Enhancements
 
-- 默认返回带行号的内容（已有）
-- 加 `maxLines` 参数限制返回行数（防止读取超大文件撑爆 context）
-- 如果文件超过 maxLines，返回前 N 行 + `... (N more lines, use offset to read more)`
+- Return line-numbered content by default (already implemented)
+- Add a `maxLines` parameter to cap the number of lines returned (prevents reading a huge file and blowing up context)
+- If the file exceeds maxLines, return the first N lines + `... (N more lines, use offset to read more)`
 
-#### B5. file_write 增加 backup
+#### B5. file_write Adds Backup
 
-写入前备份原文件到内存（不持久化），如果同一次 run 中 file_write 后发生错误，可以在 retry 时恢复。
+Back up the original file in memory before writing (not persisted); if an error occurs after file_write within the same run, it can be restored on retry.
 
-### 关于并行工具调用
+### On Parallel Tool Calls
 
-Pi Agent Core 框架层面的并行需要修改 harness，本次不做。但可以在 executeTool 层面加一个 `executeToolsBatch(toolCalls)` 批量执行函数，用 Promise.all 并行执行无依赖关系的工具调用。
+Parallelism at the Pi Agent Core framework level would require modifying the harness, so it's out of scope for now. However, an `executeToolsBatch(toolCalls)` batch-execution function can be added at the executeTool layer, using Promise.all to run independent tool calls in parallel.
 
 ---
 
-## 实现要求
+## Implementation Requirements
 
-1. **纯 Node.js (CommonJS)**，不引入新的 npm 依赖
-2. **不修改 pi-agent-core 的源码**，只改 native-agent/ 目录下的文件
-3. **tools.js 的工具定义格式**兼容 OpenAI function calling（type: 'function', function: { name, description, parameters }）
-4. **保持向后兼容**：现有配置文件、memory 文件、session 数据格式不能 break
-5. **代码风格**：跟现有代码一致，'use strict'，JSDoc 注释，console.log 带 `[NativeAgent]` 前缀
-6. **测试**：写完跑 `node -e "require('./native-agent/memory')"` 和 `require('./native-agent/tools')` 确认无语法错误
-7. **不要动这些文件**：agent.js 的 AgentSession 类结构和 run() 方法签名保持不变，只增不改
+1. **Pure Node.js (CommonJS)**, no new npm dependencies
+2. **Do not modify pi-agent-core's source** — only change files under the native-agent/ directory
+3. **tools.js's tool definition format** must stay compatible with OpenAI function calling (type: 'function', function: { name, description, parameters })
+4. **Maintain backward compatibility**: existing config files, memory files, and session data formats must not break
+5. **Code style**: match the existing code — 'use strict', JSDoc comments, console.log prefixed with `[NativeAgent]`
+6. **Testing**: after writing the code, run `node -e "require('./native-agent/memory')"` and `require('./native-agent/tools')` to confirm there are no syntax errors
+7. **Do not touch these files**: the AgentSession class structure and the run() method signature in agent.js must stay unchanged — only add to it, don't modify it
 
-## 项目路径
+## Project Path
 
 ```
 /Users/lijian/work/cloe-desktop/
 ```
 
-配置文件：`~/.cloe/native-agent.json`
-Memory 文件：`~/.cloe/native-agent-memory.json`
-Soul 文件：`~/.hermes/soul.md`（fallback from `~/.cloe/soul.md`）
-Skills 目录：`~/.hermes/skills/`（fallback from `~/.cloe/skills/`）
+Config file: `~/.cloe/native-agent.json`
+Memory file: `~/.cloe/native-agent-memory.json`
+Soul file: `~/.hermes/soul.md` (fallback from `~/.cloe/soul.md`)
+Skills directory: `~/.hermes/skills/` (fallback from `~/.cloe/skills/`)
