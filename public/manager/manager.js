@@ -49,6 +49,11 @@ function switchTab(tabId) {
   if (tabId === 'native-agent' && typeof initNativeAgentTab === 'function') {
     initNativeAgentTab();
   }
+
+  // Refresh plugin-rules dropdowns from the active action set
+  if (tabId === 'plugin-rules' && typeof refreshPluginRulesActions === 'function') {
+    refreshPluginRulesActions();
+  }
 }
 
 // ==================== i18n Update ====================

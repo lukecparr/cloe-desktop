@@ -4,6 +4,13 @@ let _pluginRulesData = null;
 
 function initPluginRulesTab() {
   renderPluginRules();
+  refreshPluginRulesActions();
+}
+
+// Re-fetch the active action set's expressions; re-render only if the list changed
+async function refreshPluginRulesActions() {
+  const changed = await loadKnownActions();
+  if (changed) renderPluginRules();
 }
 
 async function loadPluginRules() {
@@ -28,11 +35,33 @@ async function savePluginRules(rules) {
   return res.json();
 }
 
-// All known action names (for dropdowns)
-const KNOWN_ACTIONS = [
+// Fallback action names, used until the active action set is fetched
+// (or when the API is unreachable)
+const FALLBACK_ACTIONS = [
   'smile', 'blink', 'kiss', 'nod', 'wave', 'think', 'tease',
   'speak', 'shake_head', 'working', 'clap', 'shy', 'yawn', 'laugh', 'none',
 ];
+
+// Action names offered in the dropdowns; refreshed from the active action set
+let knownActions = [...FALLBACK_ACTIONS];
+
+// Fetch the active action set's action names. Returns true if the list changed.
+async function loadKnownActions() {
+  try {
+    const res = await fetch(`${API_CONFIG_BASE}/actions`);
+    if (!res.ok) return false;
+    const data = await res.json();
+    const names = (data.actions || []).map(a => a.name).filter(Boolean);
+    if (names.length === 0) return false;
+    // 'none' is a pseudo-action (no expression), not part of any set
+    if (!names.includes('none')) names.push('none');
+    const changed = names.join(',') !== knownActions.join(',');
+    knownActions = names;
+    return changed;
+  } catch (_) {
+    return false;
+  }
+}
 
 // All known tool names (for tool expression mapping)
 const KNOWN_TOOLS = [
@@ -69,7 +98,9 @@ const DEFAULT_CONTEXT_THRESHOLDS = {
 };
 
 function actionSelect(value, id, allowNone = true) {
-  const opts = KNOWN_ACTIONS.filter(a => allowNone || a !== 'none').map(a =>
+  // Keep a saved value selectable even if it's missing from the current set
+  const list = value && !knownActions.includes(value) ? [...knownActions, value] : knownActions;
+  const opts = list.filter(a => allowNone || a !== 'none').map(a =>
     `<option value="${a}" ${value === a ? 'selected' : ''}>${a}</option>`
   ).join('');
   const noneOpt = allowNone ? `<option value="" ${!value ? 'selected' : ''}>—</option>` : '';
