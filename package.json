@@ -8,6 +8,14 @@
     "email": "jakim@cloe.ai"
   },
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lukecparr/cloe-desktop.git"
+  },
+  "homepage": "https://github.com/lukecparr/cloe-desktop#readme",
+  "bugs": {
+    "url": "https://github.com/lukecparr/cloe-desktop/issues"
+  },
   "scripts": {
     "dev": "concurrently -k \"vite\" \"wait-on http://localhost:5173 && electron .\"",
     "build": "vite build",

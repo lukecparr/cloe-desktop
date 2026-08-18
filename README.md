@@ -14,6 +14,8 @@
   <img src="https://img.shields.io/badge/license-MIT-green" alt="License" />
 </p>
 
+> **Note:** This is a maintained fork of [JakimLi/cloe-desktop](https://github.com/JakimLi/cloe-desktop). All credit for the original project goes to its authors — see [Authors](#authors) below.
+
 ---
 
 ## Demo
@@ -95,7 +97,7 @@ curl -s -X POST http://localhost:19851/reminders -H 'Content-Type: application/j
 **One-line install (recommended)**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/JakimLi/cloe-desktop/main/scripts/quick-install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/lukecparr/cloe-desktop/main/scripts/quick-install.sh | bash
 ```
 
 This downloads the latest DMG (universal — Intel & Apple Silicon), installs to /Applications, launches Cloe, and sets up Hermes integration if you have it installed.
@@ -104,7 +106,7 @@ This downloads the latest DMG (universal — Intel & Apple Silicon), installs to
 
 **Manual download**
 
-1. Grab the latest `Cloe.dmg` from [Releases](https://github.com/JakimLi/cloe-desktop/releases)
+1. Grab the latest `Cloe.dmg` from [Releases](https://github.com/lukecparr/cloe-desktop/releases) (or [upstream Releases](https://github.com/JakimLi/cloe-desktop/releases) until this fork publishes its own)
 2. Open the DMG, drag **Cloe** to Applications
 3. Launch — she appears in the corner of your screen
 
@@ -113,7 +115,7 @@ This downloads the latest DMG (universal — Intel & Apple Silicon), installs to
 **Build from source**
 
 ```bash
-git clone https://github.com/JakimLi/cloe-desktop.git
+git clone https://github.com/lukecparr/cloe-desktop.git
 cd cloe-desktop
 npm install
 
@@ -388,6 +390,8 @@ New actions are immediately available to the agent — no code changes, no resta
 - **JakimLi** (Human) — product vision, Electron framework, Android app, emotional direction
 
 Built together. 💖
+
+This fork is maintained by [lukecparr](https://github.com/lukecparr).
 
 ---
 

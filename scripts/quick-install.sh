@@ -3,7 +3,7 @@
 # Cloe Desktop — One-Click Installer
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/JakimLi/cloe-desktop/main/scripts/quick-install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/lukecparr/cloe-desktop/main/scripts/quick-install.sh | bash
 #
 # What it does:
 #   1. Downloads the latest Cloe.app DMG (universal — Intel + Apple Silicon)
@@ -37,7 +37,7 @@ ${BOLD}${CYAN}  ╚════════════════════�
 echo -e "$BANNER"
 
 # ── Config ────────────────────────────────────────────────────
-GITHUB_REPO="JakimLi/cloe-desktop"
+GITHUB_REPO="${CLOE_GITHUB_REPO:-lukecparr/cloe-desktop}"
 APP_NAME="Cloe"
 HERMES_DIR="${HOME}/.hermes"
 CLOE_DATA_DIR="${HOME}/.cloe"
