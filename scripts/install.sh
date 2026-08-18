@@ -4,13 +4,22 @@
 set -e
 cd "$(dirname "$0")/.."
 
-APP_SRC="release/mac/Cloe.app"
+# Find the built app (dir mode outputs mac-arm64 or mac depending on arch,
+# DMG mode outputs mac-universal)
+APP_SRC=""
+for dir in release/mac-arm64 release/mac release/mac-universal; do
+    if [[ -d "$dir/Cloe.app" ]]; then
+        APP_SRC="$dir/Cloe.app"
+        break
+    fi
+done
 APP_DST="/Applications/Cloe.app"
 
-if [[ ! -d "$APP_SRC" ]]; then
-    echo "✗ $APP_SRC not found, run ./scripts/pack.sh first"
+if [[ -z "$APP_SRC" ]]; then
+    echo "✗ Cloe.app not found under release/, run ./scripts/pack.sh first"
     exit 1
 fi
+echo "Installing from $APP_SRC"
 
 echo "=== Installing Cloe Desktop ==="
 

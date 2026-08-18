@@ -22,6 +22,7 @@
     "start": "vite build && electron .",
     "pack": "vite build && electron-builder --mac",
     "pack:dir": "vite build && electron-builder --mac --dir",
+    "install:app": "bash scripts/pack.sh --dir && bash scripts/install.sh",
     "deploy": "bash scripts/deploy.sh",
     "test:bridge": "node test/bridge.test.js",
     "test:smoke": "node test/smoke-test.js",

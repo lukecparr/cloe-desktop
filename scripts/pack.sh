@@ -34,6 +34,14 @@ else
   echo "  Tip: create .codesign.env and set APPLE_ID and APPLE_APP_SPECIFIC_PASSWORD to enable notarization"
 fi
 
+# If the configured signing identity isn't in the keychain, electron-builder
+# skips signing; ad-hoc sign the output afterward so macOS will still launch it.
+ADHOC_SIGN=false
+if ! security find-identity -v -p codesigning 2>/dev/null | grep -qF "$CSC_NAME"; then
+  ADHOC_SIGN=true
+  echo "  ! Signing identity \"$CSC_NAME\" not in keychain — will ad-hoc sign (local use only, not distributable)"
+fi
+
 # [0] Clean old artifacts, ensure a full rebuild
 echo "[0/3] Cleaning old build artifacts..."
 rm -rf dist release
@@ -94,14 +102,27 @@ fi
 # we pre-create a fat binary via lipo.
 echo "[2.6/3] Pre-compile node-pty (universal fat binary)..."
 PTY_TMPDIR=$(mktemp -d)
-npx electron-rebuild -f -w node-pty --arch arm64
-cp node_modules/node-pty/build/Release/pty.node "$PTY_TMPDIR/pty-arm64.node"
-npx electron-rebuild -f -w node-pty --arch x64
-cp node_modules/node-pty/build/Release/pty.node "$PTY_TMPDIR/pty-x64.node"
-lipo -create -output node_modules/node-pty/build/Release/pty.node \
-  "$PTY_TMPDIR/pty-arm64.node" "$PTY_TMPDIR/pty-x64.node"
+NATIVE_ARCH=$(uname -m)
+[[ "$NATIVE_ARCH" == "x86_64" ]] && NATIVE_ARCH="x64"
+OTHER_ARCH="x64"
+[[ "$NATIVE_ARCH" == "x64" ]] && OTHER_ARCH="arm64"
+
+# Cross-compiling the non-native arch requires a healthy Xcode CLT install;
+# fall back to a native-only binary if it fails (fine for local --dir builds).
+if npx electron-rebuild -f -w node-pty --arch "$OTHER_ARCH"; then
+  cp node_modules/node-pty/build/Release/pty.node "$PTY_TMPDIR/pty-$OTHER_ARCH.node"
+  npx electron-rebuild -f -w node-pty --arch "$NATIVE_ARCH"
+  cp node_modules/node-pty/build/Release/pty.node "$PTY_TMPDIR/pty-$NATIVE_ARCH.node"
+  lipo -create -output node_modules/node-pty/build/Release/pty.node \
+    "$PTY_TMPDIR/pty-arm64.node" "$PTY_TMPDIR/pty-x64.node"
+  echo "  ✓ $(file node_modules/node-pty/build/Release/pty.node | grep -o 'universal.*')"
+else
+  echo "  ! $OTHER_ARCH cross-compile failed (Xcode CLT issue?) — building $NATIVE_ARCH-only pty.node"
+  echo "  ! A universal DMG built this way will NOT work on $OTHER_ARCH Macs"
+  npx electron-rebuild -f -w node-pty --arch "$NATIVE_ARCH"
+  echo "  ✓ $(file node_modules/node-pty/build/Release/pty.node | grep -o 'Mach-O.*')"
+fi
 rm -rf "$PTY_TMPDIR"
-echo "  ✓ $(file node_modules/node-pty/build/Release/pty.node | grep -o 'universal.*')"
 
 # [3] electron-builder
 if [[ "$1" == "--dir" ]]; then
@@ -110,8 +131,9 @@ if [[ "$1" == "--dir" ]]; then
       ./node_modules/.bin/electron-builder --mac --dir --config.npmRebuild=false
     echo ""
     echo "=== Done! ==="
-    echo "App: release/mac-arm64/Cloe.app"
-    echo "Run: open release/mac-arm64/Cloe.app"
+    APP_DIR=$(ls -d release/mac-arm64 release/mac 2>/dev/null | head -1)
+    echo "App: ${APP_DIR:-release/mac-arm64}/Cloe.app"
+    echo "Run: open ${APP_DIR:-release/mac-arm64}/Cloe.app"
 else
     echo "[3/3] electron-builder --mac (universal DMG)..."
     pkill -9 hdiutil 2>/dev/null || true
@@ -125,6 +147,19 @@ else
         SIZE=$(du -h "$DMG" | cut -f1)
         echo "DMG: $DMG ($SIZE)"
     fi
+fi
+
+# [3.2] Ad-hoc sign when no keychain identity was available (macOS refuses
+# to launch unsigned arm64 apps). Local use only — not distributable.
+if $ADHOC_SIGN; then
+    echo "[3.2/3] Ad-hoc signing..."
+    for dir in release/mac-universal release/mac-arm64 release/mac; do
+        if [[ -d "$dir/Cloe.app" ]]; then
+            codesign --force --deep -s - "$dir/Cloe.app"
+            codesign --verify --deep "$dir/Cloe.app"
+            echo "  ✓ $dir/Cloe.app ad-hoc signed"
+        fi
+    done
 fi
 
 # [3.5] Verify pty.node architectures in output

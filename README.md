@@ -123,8 +123,10 @@ npm install
 npm run dev
 
 # — or — package & install to /Applications
-./scripts/pack.sh --dir && ./scripts/install.sh
+npm run install:app        # equivalent to: ./scripts/pack.sh --dir && ./scripts/install.sh
 ```
+
+> No Apple Developer certificate? The build automatically falls back to ad-hoc signing (runs locally, not distributable). If the x64 cross-compile toolchain is unavailable, it builds a native-arch-only binary.
 
 **Prerequisites:** Node.js ≥ 18
 
