@@ -63,8 +63,8 @@ let isSpeaking = false;     // True = TTS audio playing (highest priority, nothi
 let pendingGif = null;
 let idleTimer = null;
 let reactionTimer = null;
-let idleFreezeTimer = null;
-// 'loop' = idle GIFs animate continuously; 'once' = play one pass, then hold
+// 'loop' = idle GIF loops until the next idle tick (8-15s);
+// 'once' = each idle GIF plays one pass, then flows straight into the next action
 let IDLE_PLAY_MODE = 'loop';
 
 // ==================== DOM ====================
@@ -179,7 +179,6 @@ function switchGif(name, autoReturn = true) {
     return;
   }
 
-  clearTimeout(idleFreezeTimer);
   isTransitioning = true;
   const next = getHidden();
 
@@ -220,16 +219,15 @@ function switchGif(name, autoReturn = true) {
           startIdleLoop();
         }, gifDuration);
       } else {
-        // Play-once mode: after one full pass, hold a still frame until the
-        // next idle tick. Working/speaking states keep looping — a frozen
-        // pose there would look dead for minutes.
+        // Play-once mode: chain straight into the next idle action as this
+        // pass ends — the crossfade lands right at the loop boundary.
+        // Working/speaking states always loop instead.
         if (IDLE_PLAY_MODE === 'once' && !isWorking && !isSpeaking) {
-          // The GIF started animating ~CROSSFADE_MS ago; snapshot just after
-          // it wraps back to frame 1 so the hold is seamless.
-          const holdAt = Math.max(500, gifDuration - CROSSFADE_MS + 120);
-          idleFreezeTimer = setTimeout(freezeCurrentGif, holdAt);
+          clearTimeout(idleTimer);
+          idleTimer = setTimeout(playRandomIdle, Math.max(500, gifDuration - CROSSFADE_MS));
+        } else {
+          scheduleNextIdle();
         }
-        scheduleNextIdle();
       }
     }, CROSSFADE_MS);
   }).catch((err) => {
@@ -264,24 +262,6 @@ function playRandomIdle() {
 function startIdleLoop() {
   const first = IDLE_PLAYLIST[Math.floor(Math.random() * IDLE_PLAYLIST.length)];
   switchGif(first, false);
-}
-
-// Replace the animating GIF with a still PNG of its first frame (drawImage
-// always renders an animated image's first frame). Called right as the GIF
-// wraps back to frame 1, so the swap is invisible.
-function freezeCurrentGif() {
-  if (isTransitioning || isReacting || isWorking || isSpeaking) return;
-  const active = getActive();
-  if (!active.naturalWidth) return;
-  try {
-    const canvas = document.createElement('canvas');
-    canvas.width = active.naturalWidth;
-    canvas.height = active.naturalHeight;
-    canvas.getContext('2d').drawImage(active, 0, 0);
-    active.src = canvas.toDataURL('image/png');
-  } catch (e) {
-    console.warn('[idle-freeze] Snapshot failed, GIF keeps looping:', e.message);
-  }
 }
 
 // ==================== Audio ====================
@@ -677,7 +657,6 @@ function connectWebSocket() {
         } else if (msg.type === 'idle-play-mode') {
           // Live toggle from the settings manager
           IDLE_PLAY_MODE = msg.mode === 'once' ? 'once' : 'loop';
-          clearTimeout(idleFreezeTimer);
           if (!isReacting && !isWorking && !isSpeaking) startIdleLoop();
           console.log(`[idle-play-mode] ${IDLE_PLAY_MODE}`);
         } else if (msg.type === 'context-usage') {
