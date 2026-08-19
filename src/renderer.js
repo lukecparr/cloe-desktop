@@ -66,6 +66,17 @@ let reactionTimer = null;
 // 'loop' = idle GIF loops until the next idle tick (8-15s);
 // 'once' = each idle GIF plays one pass, then flows straight into the next action
 let IDLE_PLAY_MODE = 'loop';
+// Crossfade between GIFs; disabled = instant cut (no translucent dip)
+let CROSSFADE_ENABLED = true;
+
+function fadeMs() {
+  return CROSSFADE_ENABLED ? CROSSFADE_MS : 0;
+}
+
+function applyCrossfadeSetting(enabled) {
+  CROSSFADE_ENABLED = enabled !== false;
+  document.body.classList.toggle('no-crossfade', !CROSSFADE_ENABLED);
+}
 
 // ==================== DOM ====================
 const gifLayerA = document.getElementById('cloe-gif-a');
@@ -224,12 +235,12 @@ function switchGif(name, autoReturn = true) {
         // Working/speaking states always loop instead.
         if (IDLE_PLAY_MODE === 'once' && !isWorking && !isSpeaking) {
           clearTimeout(idleTimer);
-          idleTimer = setTimeout(playRandomIdle, Math.max(500, gifDuration - CROSSFADE_MS));
+          idleTimer = setTimeout(playRandomIdle, Math.max(500, gifDuration - fadeMs()));
         } else {
           scheduleNextIdle();
         }
       }
-    }, CROSSFADE_MS);
+    }, fadeMs());
   }).catch((err) => {
     console.error(`[switchGif] ${name}: ${err.message}`);
     isTransitioning = false;
@@ -633,6 +644,7 @@ function connectWebSocket() {
           IDLE_PLAYLIST = msg.idlePlaylist || [];
           ACTION_MAP = msg.actionMap || {};
           if (msg.idlePlayMode) IDLE_PLAY_MODE = msg.idlePlayMode === 'once' ? 'once' : 'loop';
+          if ('crossfade' in msg) applyCrossfadeSetting(msg.crossfade);
 
           // Store default set as fallback
           if (msg.fallbackAnimations) {
@@ -654,6 +666,10 @@ function connectWebSocket() {
           isReacting = false;
           startIdleLoop();
           console.log(`[set-config] Updated: ${Object.keys(GIF_ANIMATIONS).length} animations, ${IDLE_PLAYLIST.length} idle entries`);
+        } else if (msg.type === 'crossfade') {
+          // Live toggle from the settings manager
+          applyCrossfadeSetting(msg.enabled);
+          console.log(`[crossfade] ${CROSSFADE_ENABLED ? 'enabled' : 'disabled'}`);
         } else if (msg.type === 'idle-play-mode') {
           // Live toggle from the settings manager
           IDLE_PLAY_MODE = msg.mode === 'once' ? 'once' : 'loop';

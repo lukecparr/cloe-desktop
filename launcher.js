@@ -163,6 +163,7 @@ function createBridgeServers() {
           idlePlaylist: set.idlePlaylist || [],
           actionMap: set.actionMap || {},
           idlePlayMode: loadConfig().idlePlayMode || 'loop',
+          crossfade: loadConfig().crossfade !== false,
         };
         // Match broadcastSetConfig: attach default set as action fallback
         if (set.id !== 'default') {

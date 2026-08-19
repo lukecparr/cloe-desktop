@@ -219,6 +219,7 @@ function broadcastSetConfig(setId) {
     idlePlaylist: set.idlePlaylist || [],
     actionMap: set.actionMap || {},
     idlePlayMode: loadConfig().idlePlayMode || 'loop',
+    crossfade: loadConfig().crossfade !== false,
   };
   // Attach default set as fallback for non-default sets
   if (setId !== 'default') {

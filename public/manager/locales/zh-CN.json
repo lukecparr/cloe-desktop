@@ -207,6 +207,8 @@
     "idlePlayModeDesc": "待机动画持续循环，或每个播放一次后立即衔接下一个",
     "idlePlayModeLoop": "循环",
     "idlePlayModeOnce": "播放一次接下一个",
+    "crossfade": "动画淡入淡出",
+    "crossfadeDesc": "动作切换时交叉淡化（瞬间会显得半透明）；关闭则直接切换",
     "characterPosition": "角色位置",
     "characterPositionDesc": "调整角色在窗口中的水平/垂直位置",
     "characterScale": "角色大小",

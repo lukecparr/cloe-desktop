@@ -87,6 +87,39 @@ module.exports = function register(ctx) {
       return true;
     }
 
+    // GET /crossfade — whether GIF transitions crossfade (default) or hard-cut
+    if (req.method === 'GET' && urlPath === '/crossfade') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ enabled: loadConfig().crossfade !== false }));
+      return true;
+    }
+
+    // POST /crossfade — toggle crossfade and push to renderer live
+    if (req.method === 'POST' && urlPath === '/crossfade') {
+      let body = '';
+      req.on('data', (chunk) => (body += chunk));
+      req.on('end', () => {
+        try {
+          const payload = JSON.parse(body || '{}');
+          if (typeof payload.enabled !== 'boolean') {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'enabled must be a boolean' }));
+            return;
+          }
+          const cfg = loadConfig();
+          cfg.crossfade = payload.enabled;
+          saveConfig(cfg);
+          require('./bridge').broadcast({ type: 'crossfade', enabled: payload.enabled });
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ enabled: payload.enabled }));
+        } catch (e) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'invalid JSON' }));
+        }
+      });
+      return true;
+    }
+
     if (req.method === 'GET' && urlPath === '/window-position') {
       const saved = loadWindowPosition();
       let current = null;

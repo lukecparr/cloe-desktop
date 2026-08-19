@@ -45,6 +45,11 @@ html, body {
   transition: opacity 0.3s ease-in-out;
 }
 
+/* Crossfade disabled: hard cut between GIF layers */
+body.no-crossfade .cloe-gif-layer {
+  transition: none;
+}
+
 #ws-status {
   position: fixed;
   bottom: 4px;

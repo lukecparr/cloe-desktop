@@ -207,6 +207,8 @@
     "idlePlayModeDesc": "Loop each idle animation until the next tick, or play each once and flow straight into the next",
     "idlePlayModeLoop": "Loop",
     "idlePlayModeOnce": "Play once, flow to next",
+    "crossfade": "Crossfade Transitions",
+    "crossfadeDesc": "Fade between animations (can look translucent for a moment); off = instant cut",
     "characterPosition": "Character Position",
     "characterPositionDesc": "Adjust character horizontal/vertical position within the window",
     "characterScale": "Character Scale",

@@ -111,6 +111,18 @@ function renderPreferences() {
         </div>
         <div class="pref-item">
           <div class="pref-info">
+            <div class="pref-label">${I18n.t('prefs.crossfade')}</div>
+            <div class="pref-desc">${I18n.t('prefs.crossfadeDesc')}</div>
+          </div>
+          <div class="pref-control">
+            <label class="toggle">
+              <input type="checkbox" id="pref-crossfade" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+        <div class="pref-item">
+          <div class="pref-info">
             <div class="pref-label">${I18n.t('prefs.chatNickname')}</div>
             <div class="pref-desc">${I18n.t('prefs.chatNicknameDesc')}</div>
           </div>
@@ -429,6 +441,26 @@ function renderPreferences() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ mode: idleModeSel.value }),
+        });
+      } catch (_) {}
+    });
+  }
+
+  // Crossfade toggle (off = hard cut between GIFs)
+  const crossfadeToggle = document.getElementById('pref-crossfade');
+  if (crossfadeToggle) {
+    (async () => {
+      try {
+        const res = await fetch(`${API_CONFIG_BASE}/crossfade`);
+        if (res.ok) crossfadeToggle.checked = (await res.json()).enabled !== false;
+      } catch (_) {}
+    })();
+    crossfadeToggle.addEventListener('change', async () => {
+      try {
+        await fetch(`${API_CONFIG_BASE}/crossfade`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ enabled: crossfadeToggle.checked }),
         });
       } catch (_) {}
     });
