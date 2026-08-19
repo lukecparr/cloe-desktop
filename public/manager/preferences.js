@@ -99,6 +99,18 @@ function renderPreferences() {
         </div>
         <div class="pref-item">
           <div class="pref-info">
+            <div class="pref-label">${I18n.t('prefs.idlePlayMode')}</div>
+            <div class="pref-desc">${I18n.t('prefs.idlePlayModeDesc')}</div>
+          </div>
+          <div class="pref-control">
+            <select id="pref-idle-play-mode" class="form-select">
+              <option value="loop">${I18n.t('prefs.idlePlayModeLoop')}</option>
+              <option value="once">${I18n.t('prefs.idlePlayModeOnce')}</option>
+            </select>
+          </div>
+        </div>
+        <div class="pref-item">
+          <div class="pref-info">
             <div class="pref-label">${I18n.t('prefs.chatNickname')}</div>
             <div class="pref-desc">${I18n.t('prefs.chatNicknameDesc')}</div>
           </div>
@@ -401,6 +413,26 @@ function renderPreferences() {
   });
 
   refreshWindowPositionUi();
+
+  // Idle playback mode (loop vs play-once-and-hold)
+  const idleModeSel = document.getElementById('pref-idle-play-mode');
+  if (idleModeSel) {
+    (async () => {
+      try {
+        const res = await fetch(`${API_CONFIG_BASE}/idle-play-mode`);
+        if (res.ok) idleModeSel.value = (await res.json()).mode || 'loop';
+      } catch (_) {}
+    })();
+    idleModeSel.addEventListener('change', async () => {
+      try {
+        await fetch(`${API_CONFIG_BASE}/idle-play-mode`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mode: idleModeSel.value }),
+        });
+      } catch (_) {}
+    });
+  }
 
   // Window scale slider
   const scaleSlider = document.getElementById('pref-window-scale');

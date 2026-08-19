@@ -53,6 +53,40 @@ module.exports = function register(ctx) {
       return true;
     }
 
+    // GET /idle-play-mode — how idle animations play: 'loop' (default) or 'once'
+    if (req.method === 'GET' && urlPath === '/idle-play-mode') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ mode: loadConfig().idlePlayMode || 'loop' }));
+      return true;
+    }
+
+    // POST /idle-play-mode — set idle playback mode and push to renderer live
+    if (req.method === 'POST' && urlPath === '/idle-play-mode') {
+      let body = '';
+      req.on('data', (chunk) => (body += chunk));
+      req.on('end', () => {
+        try {
+          const payload = JSON.parse(body || '{}');
+          const mode = payload.mode;
+          if (mode !== 'loop' && mode !== 'once') {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: "mode must be 'loop' or 'once'" }));
+            return;
+          }
+          const cfg = loadConfig();
+          cfg.idlePlayMode = mode;
+          saveConfig(cfg);
+          require('./bridge').broadcast({ type: 'idle-play-mode', mode });
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ mode }));
+        } catch (e) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'invalid JSON' }));
+        }
+      });
+      return true;
+    }
+
     if (req.method === 'GET' && urlPath === '/window-position') {
       const saved = loadWindowPosition();
       let current = null;

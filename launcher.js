@@ -157,12 +157,22 @@ function createBridgeServers() {
     const set = getActiveSet();
     if (set) {
       try {
-        ws.send(JSON.stringify({
+        const msg = {
           type: 'set-config',
           animations: set.animations || {},
           idlePlaylist: set.idlePlaylist || [],
           actionMap: set.actionMap || {},
-        }));
+          idlePlayMode: loadConfig().idlePlayMode || 'loop',
+        };
+        // Match broadcastSetConfig: attach default set as action fallback
+        if (set.id !== 'default') {
+          const defaultSet = getSetById('default');
+          if (defaultSet) {
+            msg.fallbackAnimations = defaultSet.animations || {};
+            msg.fallbackActionMap = defaultSet.actionMap || {};
+          }
+        }
+        ws.send(JSON.stringify(msg));
       } catch (_) {}
     }
 

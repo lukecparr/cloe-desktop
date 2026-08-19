@@ -22,7 +22,7 @@ const path = require('path');
 const fs = require('fs');
 const { app } = require('electron');
 
-const { getDataDir, PROJECT_ROOT } = require('./config');
+const { getDataDir, PROJECT_ROOT, loadConfig } = require('./config');
 const bridge = require('./bridge');
 
 let actionSetsData = null;
@@ -218,6 +218,7 @@ function broadcastSetConfig(setId) {
     animations: set.animations || {},
     idlePlaylist: set.idlePlaylist || [],
     actionMap: set.actionMap || {},
+    idlePlayMode: loadConfig().idlePlayMode || 'loop',
   };
   // Attach default set as fallback for non-default sets
   if (setId !== 'default') {
